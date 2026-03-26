@@ -1,26 +1,44 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #070b1b;
+  --foreground: #f0f0ee;
+  --color-primary: #8c73f8;
+  --color-accent-yellow: #faff00;
+  --color-accent-red: #ff6b84;
+  --color-accent-green: #7cffb5;
+  --color-accent-orange: #ffd65a;
+  --color-accent-blue: #38a5ff;
+  --color-accent-sky: #a6ddff;
+  --color-neutral-white: #f0f0ee;
+  --color-neutral-black: #0f0f0f;
+  --color-neutral-grey: #585858;
+  --surface-glass: rgba(15, 15, 15, 0.62);
+  --surface-glass-strong: rgba(15, 15, 15, 0.82);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-inter);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "PT Root UI", var(--font-inter), "Segoe UI", sans-serif;
+  background-image:
+    radial-gradient(circle at 11% 0%, rgba(56, 165, 255, 0.15), transparent 26%),
+    radial-gradient(circle at 86% 16%, rgba(140, 115, 248, 0.23), transparent 30%),
+    radial-gradient(circle at 50% 100%, rgba(124, 255, 181, 0.1), transparent 30%),
+    linear-gradient(165deg, #06091a 0%, #0a0f26 44%, #07080f 100%);
+}
+
+* {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+::selection {
+  background: rgba(140, 115, 248, 0.35);
+  color: #ffffff;
 }
