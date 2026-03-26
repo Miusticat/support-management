@@ -15,17 +15,22 @@ import { ChartCard } from "@/app/components/chart-card";
 
 type ActivityPoint = {
   month: string;
-  hours: number;
+  value: number;
 };
 
-type ConsolePoint = {
+type BreakdownPoint = {
   name: string;
-  hours: number;
+  value: number;
 };
 
 type ChartsPanelProps = {
   activityData: ActivityPoint[];
-  consoleData: ConsolePoint[];
+  breakdownData: BreakdownPoint[];
+  activityTitle: string;
+  activitySubtitle: string;
+  activityBadge?: string;
+  breakdownTitle: string;
+  breakdownSubtitle: string;
 };
 
 const tooltipStyle = {
@@ -35,14 +40,22 @@ const tooltipStyle = {
   color: "#f0f0ee",
 };
 
-export function ChartsPanel({ activityData, consoleData }: ChartsPanelProps) {
+export function ChartsPanel({
+  activityData,
+  breakdownData,
+  activityTitle,
+  activitySubtitle,
+  activityBadge,
+  breakdownTitle,
+  breakdownSubtitle,
+}: ChartsPanelProps) {
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-7">
       <ChartCard
         className="xl:col-span-4"
-        title="Gaming Activity"
-        subtitle="Hours played throughout the year"
-        badge="+14%"
+        title={activityTitle}
+        subtitle={activitySubtitle}
+        badge={activityBadge}
       >
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -59,7 +72,7 @@ export function ChartsPanel({ activityData, consoleData }: ChartsPanelProps) {
               <Tooltip contentStyle={tooltipStyle} />
               <Line
                 type="monotone"
-                dataKey="hours"
+                dataKey="value"
                 stroke="url(#activityLine)"
                 strokeWidth={3}
                 dot={{ stroke: "#A6DDFF", strokeWidth: 2, r: 4, fill: "#0b1021" }}
@@ -72,12 +85,12 @@ export function ChartsPanel({ activityData, consoleData }: ChartsPanelProps) {
 
       <ChartCard
         className="xl:col-span-3"
-        title="Console Preferences"
-        subtitle="Total hours by platform"
+        title={breakdownTitle}
+        subtitle={breakdownSubtitle}
       >
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={consoleData}>
+            <BarChart data={breakdownData}>
               <defs>
                 <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#7CFFB5" stopOpacity={0.95} />
@@ -88,7 +101,7 @@ export function ChartsPanel({ activityData, consoleData }: ChartsPanelProps) {
               <XAxis dataKey="name" stroke="#585858" tickLine={false} axisLine={false} />
               <YAxis stroke="#585858" tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="hours" fill="url(#barFill)" radius={[8, 8, 2, 2]} />
+              <Bar dataKey="value" fill="url(#barFill)" radius={[8, 8, 2, 2]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

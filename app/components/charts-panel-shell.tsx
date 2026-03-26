@@ -4,17 +4,22 @@ import dynamic from "next/dynamic";
 
 type ActivityPoint = {
   month: string;
-  hours: number;
+  value: number;
 };
 
-type ConsolePoint = {
+type BreakdownPoint = {
   name: string;
-  hours: number;
+  value: number;
 };
 
 type ChartsPanelShellProps = {
   activityData: ActivityPoint[];
-  consoleData: ConsolePoint[];
+  breakdownData: BreakdownPoint[];
+  activityTitle: string;
+  activitySubtitle: string;
+  activityBadge?: string;
+  breakdownTitle: string;
+  breakdownSubtitle: string;
 };
 
 const ChartsPanel = dynamic(
