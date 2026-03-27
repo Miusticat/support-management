@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,8 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
-    "vercel-build": "npm run db:migrate:deploy && npm run build"
+    "db:migrate:deploy:if-configured": "node -e \"if (!process.env.DATABASE_URL) { console.log('Skipping prisma migrate deploy: DATABASE_URL is not set'); process.exit(0); } require('child_process').execSync('npx prisma migrate deploy', { stdio: 'inherit' });\"",
+    "vercel-build": "npm run db:migrate:deploy:if-configured && npm run build"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
