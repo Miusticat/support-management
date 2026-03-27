@@ -38,6 +38,7 @@ async function loadDashboardData() {
   }
 
   const uniqueSupports = new Set<string>();
+  const activeSupports = new Set<string>();
   let gravesCount = 0;
   const breakdownMap = new Map<string, number>([
     ["Advertencia", 0],
@@ -62,6 +63,10 @@ async function loadDashboardData() {
   for (const row of lifecycleRows) {
     if (row.supportDiscordId?.trim()) {
       uniqueSupports.add(row.supportDiscordId);
+      // Add to activeSupports only if status is "Activo" (not Expulsado or Renuncio)
+      if (!["Expulsado", "Renuncio"].includes(row.manualStatus)) {
+        activeSupports.add(row.supportDiscordId);
+      }
     }
   }
 
@@ -131,17 +136,10 @@ async function loadDashboardData() {
     stats: [
       {
         title: "Total de Supports",
-        value: String(uniqueSupports.size),
-        description: "Supports detectados por historial y estado administrativo.",
+        value: String(activeSupports.size),
+        description: "Total de supports en estado Activo",
         icon: UsersRound,
         gradient: "from-[var(--color-accent-green)]/35 via-[var(--color-accent-blue)]/20 to-[var(--color-primary)]/25",
-      },
-      {
-        title: "Total de Supports",
-        value: String(totalSupportsInServer),
-        description: "Total de supports activos en el servidor.",
-        icon: AlertTriangle,
-        gradient: "from-[var(--color-primary)]/38 via-[var(--color-accent-blue)]/20 to-[var(--color-accent-sky)]/15",
       },
       {
         title: "Casos Graves",
