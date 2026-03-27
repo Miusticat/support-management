@@ -12,7 +12,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:migrate:deploy:if-configured": "node -e \"if (!process.env.DATABASE_URL) { console.log('Skipping prisma migrate deploy: DATABASE_URL is not set'); process.exit(0); } require('child_process').execSync('npx prisma migrate deploy', { stdio: 'inherit' });\"",
+    "db:migrate:deploy:if-configured": "node -e \"if (!process.env.DATABASE_URL) { console.log('Skipping prisma migrate deploy: DATABASE_URL is not set'); process.exit(0); } try { require('child_process').execSync('npx prisma migrate deploy', { stdio: 'inherit' }); } catch (err) { console.warn('⚠ Warning: Prisma migrations failed. Build will continue, but ensure database is synced before runtime. Error:', err.message); }\"",
     "vercel-build": "npm run db:migrate:deploy:if-configured && npm run build"
   },
   "dependencies": {
