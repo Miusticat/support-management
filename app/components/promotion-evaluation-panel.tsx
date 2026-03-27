@@ -203,7 +203,7 @@ export function PromotionEvaluationPanel() {
   const filteredSupports = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return supports.filter((support) => {
+    const filtered = supports.filter((support) => {
       const matchesSearch =
         normalizedQuery.length === 0 ||
         support.displayName.toLowerCase().includes(normalizedQuery) ||
@@ -227,6 +227,28 @@ export function PromotionEvaluationPanel() {
       }
 
       return true;
+    });
+
+    return filtered.sort((a, b) => {
+      const priorityOrder = { Pendiente: 0, "No Pasa": 1, Pasa: 2 };
+      const aPriority = priorityOrder[a.decision] ?? 3;
+      const bPriority = priorityOrder[b.decision] ?? 3;
+
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
+      const aProgress = a.completedEvaluations / Math.max(1, a.requiredEvaluations);
+      const bProgress = b.completedEvaluations / Math.max(1, b.requiredEvaluations);
+
+      if (aProgress !== bProgress) {
+        return aProgress - bProgress;
+      }
+
+      const aHasSanctions = a.sanctionsSummary.hasSanctions ? 0 : 1;
+      const bHasSanctions = b.sanctionsSummary.hasSanctions ? 0 : 1;
+
+      return aHasSanctions - bHasSanctions;
     });
   }, [supports, query, statusFilter]);
 
