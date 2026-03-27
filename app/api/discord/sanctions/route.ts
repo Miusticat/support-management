@@ -450,3 +450,145 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }
+
+export async function DELETE(request: Request) {
+  const authorized = await isAuthorizedBySession();
+  if (!authorized) {
+    return NextResponse.json(
+      { error: "Unauthorized to delete sanctions" },
+      { status: 401 }
+    );
+  }
+
+  let body: { id: string };
+  try {
+    body = (await request.json()) as { id: string };
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON payload" },
+      { status: 400 }
+    );
+  }
+
+  if (!body.id) {
+    return NextResponse.json(
+      { error: "id is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const delegate = (prisma as unknown as {
+      staffSanction?: {
+        delete: (args: {
+          where: { id: string };
+        }) => Promise<unknown>;
+      };
+    }).staffSanction;
+
+    if (delegate?.delete) {
+      await delegate.delete({
+        where: { id: body.id },
+      });
+    } else {
+      await prisma.$executeRaw`
+        DELETE FROM "StaffSanction"
+        WHERE "id" = ${body.id}
+      `;
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: "Sanción eliminada correctamente",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const authorized = await isAuthorizedBySession();
+  if (!authorized) {
+    return NextResponse.json(
+      { error: "Unauthorized to update sanctions" },
+      { status: 401 }
+    );
+  }
+
+  let body: {
+    id: string;
+    supportName?: string;
+    supportDiscordId?: string;
+    adminName?: string;
+    requestedSanction?: string;
+    appliedSanction?: string;
+    accumulationNote?: string;
+    fecha?: string;
+  };
+  try {
+    body = (await request.json()) as typeof body;
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON payload" },
+      { status: 400 }
+    );
+  }
+
+  if (!body.id) {
+    return NextResponse.json(
+      { error: "id is required" },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const updateData: Record<string, unknown> = {};
+
+    if (body.supportName !== undefined) updateData.supportName = body.supportName;
+    if (body.supportDiscordId !== undefined) updateData.supportDiscordId = body.supportDiscordId;
+    if (body.adminName !== undefined) updateData.adminName = body.adminName;
+    if (body.requestedSanction !== undefined) updateData.requestedSanction = body.requestedSanction;
+    if (body.appliedSanction !== undefined) updateData.appliedSanction = body.appliedSanction;
+    if (body.accumulationNote !== undefined) updateData.accumulationNote = body.accumulationNote;
+    if (body.fecha !== undefined) updateData.fecha = body.fecha;
+
+    const delegate = (prisma as unknown as {
+      staffSanction?: {
+        update: (args: {
+          where: { id: string };
+          data: Record<string, unknown>;
+        }) => Promise<unknown>;
+      };
+    }).staffSanction;
+
+    if (delegate?.update) {
+      await delegate.update({
+        where: { id: body.id },
+        data: updateData,
+      });
+    } else {
+      const setClause = Object.entries(updateData)
+        .map(([key, value]) => `"${key}" = ${
+          typeof value === "string" ? `'${value.replace(/'/g, "''")}'` : value
+        }`)
+        .join(", ");
+
+      if (setClause) {
+        await prisma.$executeRaw`
+          UPDATE "StaffSanction"
+          SET ${setClause}
+          WHERE "id" = ${body.id}
+        `;
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message: "Sanción actualizada correctamente",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}

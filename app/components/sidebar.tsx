@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { LayoutDashboard, Megaphone, ClipboardCheck, AlertTriangle, ScrollText, UsersRound, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Megaphone, ClipboardCheck, AlertTriangle, ScrollText, UsersRound, Settings, LogOut, Shield } from "lucide-react";
 
 type NavItem = {
   label: string;
@@ -20,6 +20,7 @@ const primaryItems: NavItem[] = [
   { label: "Evaluación de Ascenso", icon: ClipboardCheck, href: "/discord/evaluacion-ascenso" },
   { label: "Registrar Sanción", icon: AlertTriangle, href: "/discord/registrar-sancion" },
   { label: "Historial de Sanciones", icon: ScrollText, href: "/discord/historial-sanciones" },
+  { label: "Admin", icon: Shield, href: "/discord/admin" },
 ];
 
 const secondaryItems: NavItem[] = [
@@ -70,6 +71,8 @@ export function Sidebar() {
   const canAccessSupports = (session?.user?.staffLevel ?? 0) >= 1;
   const canAccessSanctions =
     currentRole === "Support Lead" || currentRole === "Support Trainer";
+  const canAccessAdmin = currentRole === "Support Lead";
+
   const visiblePrimaryItems = primaryItems.filter((item) => {
     if (item.href === "/supports") {
       return canAccessSupports;
@@ -83,6 +86,10 @@ export function Sidebar() {
       ].includes(item.href)
     ) {
       return canAccessSanctions;
+    }
+
+    if (item.href === "/discord/admin") {
+      return canAccessAdmin;
     }
 
     return true;

@@ -73,6 +73,10 @@ export function canAccessSanctionsByRole(roleName: StaffRoleName) {
   return roleName === "Support Lead" || roleName === "Support Trainer";
 }
 
+export function canAccessAdminPanel(roleName: StaffRoleName) {
+  return roleName === "Support Lead";
+}
+
 export async function fetchDiscordMemberRoleIds(userDiscordId: string): Promise<string[]> {
   const guildId = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
