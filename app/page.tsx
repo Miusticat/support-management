@@ -60,13 +60,23 @@ async function loadDashboardData() {
     breakdownMap.set(row.appliedSanction, (breakdownMap.get(row.appliedSanction) ?? 0) + 1);
   }
 
+  // Start with all supports as active by default
+  const inactiveSupports = new Set<string>();
+
   for (const row of lifecycleRows) {
     if (row.supportDiscordId?.trim()) {
       uniqueSupports.add(row.supportDiscordId);
-      // Add to activeSupports only if status is "Activo" (not Expulsado or Renuncio)
-      if (!["Expulsado", "Renuncio"].includes(row.manualStatus)) {
-        activeSupports.add(row.supportDiscordId);
+      // Only mark as inactive if explicitly set to Expulsado or Renuncio
+      if (["Expulsado", "Renuncio"].includes(row.manualStatus)) {
+        inactiveSupports.add(row.supportDiscordId);
       }
+    }
+  }
+
+  // All supports are active by default, except those marked as inactive
+  for (const support of uniqueSupports) {
+    if (!inactiveSupports.has(support)) {
+      activeSupports.add(support);
     }
   }
 
