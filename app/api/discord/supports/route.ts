@@ -258,6 +258,34 @@ export async function GET() {
       lifecycleBySupport.set(lifecycle.supportDiscordId, lifecycle);
     }
 
+    // Auto-create lifecycle records for new supports with "Activo" status
+    const existingSupportIds = new Set(lifecycleBySupport.keys());
+    const newSupportIds = members
+      .filter(
+        (member) =>
+          member.user?.id?.trim() &&
+          !existingSupportIds.has(member.user.id.trim())
+      )
+      .map((member) => member.user!.id!.trim());
+
+    if (newSupportIds.length > 0) {
+      await ensureLifecycleTable();
+      for (const supportId of newSupportIds) {
+        await prisma.$executeRaw`
+          INSERT INTO "SupportLifecycleState" (
+            "supportDiscordId",
+            "manualStatus",
+            "updatedAt"
+          ) VALUES (
+            ${supportId},
+            'Activo',
+            NOW()
+          )
+          ON CONFLICT ("supportDiscordId") DO NOTHING
+        `;
+      }
+    }
+
     for (const row of sanctionRows) {
       const supportId = row.supportDiscordId?.trim();
       if (!supportId) {
