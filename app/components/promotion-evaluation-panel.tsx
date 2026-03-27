@@ -361,9 +361,9 @@ export function PromotionEvaluationPanel() {
         ) : null}
 
         {!loading && !error ? (
-          <div className="relative z-10 mt-5 space-y-4">
+          <div className="relative z-10 mt-5 grid gap-4 lg:grid-cols-[280px_1fr]">
             <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-              <div className="max-h-[15rem] space-y-2 overflow-y-auto pr-1">
+              <div className="max-h-[40rem] space-y-2 overflow-y-auto pr-1">
                 {filteredSupports.map((support) => {
                   const isSelected = selectedSupportId === support.id;
 
