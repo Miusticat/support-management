@@ -387,6 +387,9 @@ export function PromotionEvaluationPanel() {
                           <p className="mt-0.5 text-[11px] text-[var(--color-neutral-grey)] truncate">
                             {support.username ? `@${support.username}` : support.id}
                           </p>
+                          <p className="mt-1 text-[10px] font-medium text-[var(--color-neutral-grey)]">
+                            {support.completedEvaluations}/{support.requiredEvaluations} · Faltan {Math.max(0, support.requiredEvaluations - support.completedEvaluations)}
+                          </p>
                         </div>
                         <span className={`inline-flex shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium ${decisionClassMap[support.decision]}`}>
                           {support.decision}
@@ -509,6 +512,27 @@ export function PromotionEvaluationPanel() {
                                 </span>
                                 <span className="text-xs text-[var(--color-neutral-grey)]">/10</span>
                               </div>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3">
+                              <label htmlFor={`score-input-${selectedSupport.id}`} className="text-[11px] text-[var(--color-neutral-grey)]">
+                                Escribir calificación
+                              </label>
+                              <input
+                                id={`score-input-${selectedSupport.id}`}
+                                type="number"
+                                min={1}
+                                max={10}
+                                step={1}
+                                value={selectedScore}
+                                onChange={(e) =>
+                                  setScoreDraft((prev) => ({
+                                    ...prev,
+                                    [selectedSupport.id]: clampScore(Number(e.target.value)),
+                                  }))
+                                }
+                                className="w-18 rounded-md border border-white/15 bg-[#0f1426]/90 px-2 py-1 text-center text-sm text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-accent-blue)]/60"
+                              />
                             </div>
 
                             <input
