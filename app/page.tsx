@@ -6,6 +6,8 @@ import { StatCard } from "@/app/components/stat-card";
 import { TeamSupportPanel } from "@/app/components/team-support-panel";
 import { TopNavbar } from "@/app/components/top-navbar";
 
+export const dynamic = "force-dynamic";
+
 const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
 type SanctionRow = {
