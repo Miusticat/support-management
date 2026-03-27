@@ -21,6 +21,89 @@ type LifecycleRow = {
   manualStatus: string;
 };
 
+type DiscordGuildMember = {
+  roles?: string[];
+  user?: {
+    id?: string;
+  };
+};
+
+function normalizeRoleId(value: string | undefined, fallback: string) {
+  return (value ?? fallback).trim().replace(/^"|"$/g, "") || fallback;
+}
+
+const ROLE_SUPPORT_LEAD_ID = normalizeRoleId(
+  process.env.DISCORD_ROLE_SUPPORT_LEAD_ID,
+  "1486041732238803096"
+);
+const ROLE_SUPPORT_TRAINER_ID = normalizeRoleId(
+  process.env.DISCORD_ROLE_SUPPORT_TRAINER_ID,
+  "1486041733405081712"
+);
+const ROLE_SUPPORT_ID = normalizeRoleId(
+  process.env.DISCORD_ROLE_SUPPORT_ID,
+  "1486041737964290211"
+);
+
+async function fetchGuildSupportIds() {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+
+  if (!guildId || !botToken) {
+    return new Set<string>();
+  }
+
+  const collected: DiscordGuildMember[] = [];
+  let after = "0";
+
+  for (let page = 0; page < 5; page += 1) {
+    const response = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bot ${botToken}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      return new Set<string>();
+    }
+
+    const pageMembers = (await response.json()) as DiscordGuildMember[];
+    if (!Array.isArray(pageMembers) || pageMembers.length === 0) {
+      break;
+    }
+
+    collected.push(...pageMembers);
+    const lastMemberId = pageMembers[pageMembers.length - 1]?.user?.id;
+    if (!lastMemberId) {
+      break;
+    }
+
+    after = lastMemberId;
+    if (pageMembers.length < 1000) {
+      break;
+    }
+  }
+
+  return new Set(
+    collected
+      .filter((member) => {
+        const roles = Array.isArray(member.roles) ? member.roles : [];
+        return (
+          roles.includes(ROLE_SUPPORT_LEAD_ID) ||
+          roles.includes(ROLE_SUPPORT_TRAINER_ID) ||
+          roles.includes(ROLE_SUPPORT_ID)
+        );
+      })
+      .map((member) => member.user?.id?.trim() ?? "")
+      .filter((id) => id.length > 0)
+  );
+}
+
 async function loadDashboardData() {
   const sanctionRows = await prisma.$queryRaw<SanctionRow[]>`
     SELECT "supportDiscordId", "appliedSanction", "createdAt"
@@ -37,8 +120,7 @@ async function loadDashboardData() {
     lifecycleRows = [];
   }
 
-  const uniqueSupports = new Set<string>();
-  const activeSupports = new Set<string>();
+  const currentSupportIds = await fetchGuildSupportIds();
   let gravesCount = 0;
   const breakdownMap = new Map<string, number>([
     ["Advertencia", 0],
@@ -49,10 +131,6 @@ async function loadDashboardData() {
   ]);
 
   for (const row of sanctionRows) {
-    if (row.supportDiscordId?.trim()) {
-      uniqueSupports.add(row.supportDiscordId);
-    }
-
     if (["Warn Grave", "Suspension", "Remocion"].includes(row.appliedSanction)) {
       gravesCount += 1;
     }
@@ -60,50 +138,20 @@ async function loadDashboardData() {
     breakdownMap.set(row.appliedSanction, (breakdownMap.get(row.appliedSanction) ?? 0) + 1);
   }
 
-  // Start with all supports as active by default
   const inactiveSupports = new Set<string>();
 
   for (const row of lifecycleRows) {
     if (row.supportDiscordId?.trim()) {
-      uniqueSupports.add(row.supportDiscordId);
-      // Only mark as inactive if explicitly set to Expulsado or Renuncio
       if (["Expulsado", "Renuncio"].includes(row.manualStatus)) {
         inactiveSupports.add(row.supportDiscordId);
       }
     }
   }
 
-  // All supports are active by default, except those marked as inactive
-  for (const support of uniqueSupports) {
-    if (!inactiveSupports.has(support)) {
-      activeSupports.add(support);
-    }
-  }
-
-  let totalSupportsInServer = 0;
-  try {
-    const supportCountResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT COUNT(DISTINCT "supportDiscordId") as count
-      FROM "StaffSanction"
-      UNION ALL
-      SELECT COUNT(DISTINCT "supportDiscordId") as count
-      FROM "SupportLifecycleState"
-    `;
-    const allSupportIds = new Set<string>();
-    for (const row of sanctionRows) {
-      if (row.supportDiscordId?.trim()) {
-        allSupportIds.add(row.supportDiscordId);
-      }
-    }
-    for (const row of lifecycleRows) {
-      if (row.supportDiscordId?.trim()) {
-        allSupportIds.add(row.supportDiscordId);
-      }
-    }
-    totalSupportsInServer = allSupportIds.size;
-  } catch {
-    totalSupportsInServer = uniqueSupports.size;
-  }
+  const activeSupportCount =
+    currentSupportIds.size > 0
+      ? Array.from(currentSupportIds).filter((supportId) => !inactiveSupports.has(supportId)).length
+      : lifecycleRows.filter((row) => !["Expulsado", "Renuncio"].includes(row.manualStatus)).length;
 
   const expulsadosOrRenuncias = lifecycleRows.filter((row) =>
     ["Expulsado", "Renuncio"].includes(row.manualStatus)
@@ -146,7 +194,7 @@ async function loadDashboardData() {
     stats: [
       {
         title: "Total de Supports",
-        value: String(activeSupports.size),
+        value: String(activeSupportCount),
         description: "Total de supports en estado Activo",
         icon: UsersRound,
         gradient: "from-[var(--color-accent-green)]/35 via-[var(--color-accent-blue)]/20 to-[var(--color-primary)]/25",
