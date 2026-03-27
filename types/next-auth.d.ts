@@ -1,4 +1,5 @@
 import { DefaultSession } from "next-auth";
+import type { StaffRoleName } from "@/lib/discord-staff-roles";
 
 declare module "next-auth" {
   interface Session {
@@ -7,7 +8,7 @@ declare module "next-auth" {
       discordUserId: string | null;
       discordGuildId: string | null;
       discordPermissions: string | null;
-      staffRole: string | null;
+      staffRole: StaffRoleName;
       staffLevel: number;
       discordRoleIds: string[];
     } & DefaultSession["user"];
@@ -20,7 +21,7 @@ declare module "next-auth/jwt" {
     discordPermissions?: string | null;
     discordUserId?: string;
     discordAccessToken?: string;
-    staffRole?: string | null;
+    staffRole?: StaffRoleName;
     staffLevel?: number;
     discordRoleIds?: string[];
     rolesFetchedAt?: number;

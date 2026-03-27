@@ -355,7 +355,7 @@ export function PromotionEvaluationPanel() {
         <h3 className="text-base font-semibold text-[var(--color-neutral-white)]">Panel del Evaluador</h3>
         {!selectedSupport ? (
           <p className="mt-3 text-sm text-[var(--color-neutral-grey)]">
-            Selecciona un Support desde la tabla y pulsa "Evaluar" para registrar tu calificacion.
+            Selecciona un Support desde la tabla y pulsa &quot;Evaluar&quot; para registrar tu calificacion.
           </p>
         ) : showSanctionsSummary ? (
           <div className="mt-3 space-y-3">
