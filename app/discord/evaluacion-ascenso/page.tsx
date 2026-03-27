@@ -34,6 +34,21 @@ export default async function PromotionEvaluationPage() {
           <p className="mt-2 max-w-3xl text-sm text-[var(--color-neutral-grey)]">
             Evaluacion colaborativa exclusiva para Support Lead y Support Trainer sobre miembros del rango Support.
           </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
+              1. Selecciona support
+            </span>
+            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
+              2. Revisa historial
+            </span>
+            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
+              3. Registra puntaje
+            </span>
+            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
+              4. Decision automatica
+            </span>
+          </div>
         </section>
 
         <PromotionEvaluationPanel />
