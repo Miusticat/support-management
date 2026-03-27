@@ -246,11 +246,11 @@ export function SupportsOverviewPanel() {
           <p className="mt-2 text-3xl font-semibold text-[var(--color-neutral-white)]">{totals.all}</p>
         </UICard>
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Historial Limpio</p>
+          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Historial limpio</p>
           <p className="mt-2 text-3xl font-semibold text-[var(--color-accent-green)]">{totals.clean}</p>
         </UICard>
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Riesgo Alto/Critico</p>
+          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Riesgo alto/crítico</p>
           <p className="mt-2 text-3xl font-semibold text-[var(--color-accent-red)]">{totals.risk}</p>
         </UICard>
       </div>
@@ -277,18 +277,18 @@ export function SupportsOverviewPanel() {
               style={{ colorScheme: "dark" }}
             >
               <option value="all">Todos los estados</option>
-              <option value="clean">Historial Limpio</option>
+              <option value="clean">Historial limpio</option>
               <option value="low">Bajo</option>
               <option value="medium">Medio</option>
               <option value="high">Alto</option>
-              <option value="critical">Critico</option>
+              <option value="critical">Crítico</option>
             </select>
           </div>
         </div>
 
         {canManageManualStatus ? (
           <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">
-            Puedes gestionar estado administrativo por miembro: Expulsado, Renuncio o Reincorporado.
+            Puedes gestionar estado administrativo por miembro: Expulsado, renunció, o fue reincorporado.
           </p>
         ) : null}
 
@@ -319,10 +319,10 @@ export function SupportsOverviewPanel() {
                   <th className="px-3 py-2 font-medium">Estado</th>
                   <th className="px-3 py-2 font-medium">Total sanciones</th>
                   <th className="px-3 py-2 font-medium">Advertencia</th>
-                  <th className="px-3 py-2 font-medium">Warn Intermedio</th>
-                  <th className="px-3 py-2 font-medium">Warn Grave</th>
-                  <th className="px-3 py-2 font-medium">Suspension</th>
-                  <th className="px-3 py-2 font-medium">Remocion</th>
+                  <th className="px-3 py-2 font-medium">Advertencia intermedia</th>
+                  <th className="px-3 py-2 font-medium">Advertencia grave</th>
+                  <th className="px-3 py-2 font-medium">Suspensión</th>
+                  <th className="px-3 py-2 font-medium">Remoción</th>
                 </tr>
               </thead>
               <tbody>
@@ -439,7 +439,7 @@ export function SupportsOverviewPanel() {
       <UICard className="p-4">
         <div className="grid grid-cols-1 gap-3 text-xs text-[var(--color-neutral-grey)] sm:grid-cols-3">
           <p className="inline-flex items-center gap-1.5"><UsersRound className="h-3.5 w-3.5" /> Lista desde Discord</p>
-          <p className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Historial Limpio = 0 sanciones</p>
+          <p className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Historial limpio = 0 sanciones</p>
           <p className="inline-flex items-center gap-1.5"><ShieldAlert className="h-3.5 w-3.5" /> Estado por gravedad acumulada</p>
         </div>
       </UICard>

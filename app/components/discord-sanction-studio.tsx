@@ -622,37 +622,37 @@ export function DiscordSanctionStudio() {
 
   async function copyPreview() {
     const previewText = [
-      "## Registro de Sancion:",
+      "## Registro de sanción:",
       "### Fecha:",
       fecha || "(DD/MM/AA)",
       "",
-      "### Datos del Admin que sanciona:",
-      `* Trainer/Admin que sanciona: ${adminSanciona || "-"}`,
+      "### Administrador que sanciona:",
+      `* Administrador que sanciona: ${adminSanciona || "-"}`,
       "",
       "### Datos del Support:",
-      `* Support Sancionado: ${supportSancionado || "-"}`,
+      `* Support sancionado: ${supportSancionado || "-"}`,
       `* Link de PCU: ${supportPcuLink || "-"}`,
       "",
       "**Motivo:**",
       motivo || "(Explicacion clara de lo ocurrido)",
       "",
-      "**Tabla de evaluacion:**",
+      "**Tabla de evaluación:**",
       `Bloque: ${policyCategory || "-"}`,
       `Falta: ${policyFault || "-"}`,
       "",
-      "**Categoria (Puede elegir una o varias segun aplique):**",
+      "**Categoría (Puede elegir una o varias según aplique):**",
       categoriasText,
       "",
-      "**Pruebas:**",
+      "**Evidencia:**",
       pruebas || "-",
       "",
-      "**Sancion:**",
+      "**Sanción:**",
       `${sancion} (${levelText})`,
       "",
-      "**Acumulacion:**",
+      "**Acumulación:**",
       `Advertencias previas: ${prevAdvertencias}`,
-      `Warn Intermedios previos: ${prevWarnIntermedios}`,
-      `Warn Graves previos: ${prevWarnGraves}`,
+      `Advertencias intermedias previas: ${prevWarnIntermedios}`,
+      `Advertencias graves previas: ${prevWarnGraves}`,
       accumulationNote,
       "",
       "**Observaciones:**",
@@ -722,7 +722,7 @@ export function DiscordSanctionStudio() {
 
       const data = await parseJsonSafe<{ ok?: boolean; error?: string }>(response);
       if (!response.ok || !data?.ok) {
-        throw new Error(data?.error ?? "No se pudo registrar la sancion");
+        throw new Error(data?.error ?? "No se pudo registrar la sanción");
       }
 
       const result = data as {
@@ -747,10 +747,10 @@ export function DiscordSanctionStudio() {
         loading: false,
         error: null,
         success: result.finalSanction
-          ? `Sancion registrada en BD y enviada a Discord. Sancion final: ${result.finalSanction}${
+          ? `Sanción registrada en BD y enviada a Discord. Sanción final: ${result.finalSanction}${
               result.finalLevel ? ` (${result.finalLevel})` : ""
             }.`
-          : "Sancion registrada en BD y enviada a Discord.",
+          : "Sanción registrada en BD y enviada a Discord.",
       });
 
       setPruebas("");
@@ -1035,7 +1035,7 @@ export function DiscordSanctionStudio() {
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-accent-red)]/45 bg-[var(--color-accent-red)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-neutral-white)] transition-all duration-200 hover:bg-[var(--color-accent-red)]/24 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Send className="h-4 w-4" />
-            {publish.loading ? "Registrando..." : "Registrar sancion"}
+            {publish.loading ? "Registrando..." : "Registrar sanción"}
           </button>
 
           {missingRequired.length > 0 ? (

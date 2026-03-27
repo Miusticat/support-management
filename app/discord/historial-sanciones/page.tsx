@@ -83,10 +83,10 @@ export default async function SanctionsHistoryPage() {
         <section className="mb-6">
           <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Bot Tools</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-neutral-white)] sm:text-3xl">
-            Historial de Sanciones
+            Historial de sanciones
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-[var(--color-neutral-grey)]">
-            Consulta rapida de sanciones registradas, reincidencias y ranking de miembros con mayor numero de sanciones.
+            Consulta rápida de sanciones registradas, reincidencias y ranking de miembros con mayor número de sanciones.
           </p>
         </section>
 

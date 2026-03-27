@@ -16,16 +16,16 @@ type NavItem = {
 const primaryItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/" },
   { label: "Supports", icon: UsersRound, href: "/supports" },
-  { label: "Anuncios Discord", icon: Megaphone, href: "/discord" },
-  { label: "Evaluación de Ascenso", icon: ClipboardCheck, href: "/discord/evaluacion-ascenso" },
-  { label: "Registrar Sanción", icon: AlertTriangle, href: "/discord/registrar-sancion" },
-  { label: "Historial de Sanciones", icon: ScrollText, href: "/discord/historial-sanciones" },
+  { label: "Anuncios discord", icon: Megaphone, href: "/discord" },
+  { label: "Evaluación de ascensos", icon: ClipboardCheck, href: "/discord/evaluacion-ascenso" },
+  { label: "Registrar sanciones", icon: AlertTriangle, href: "/discord/registrar-sancion" },
+  { label: "Historial de sanciones", icon: ScrollText, href: "/discord/historial-sanciones" },
   { label: "Admin", icon: Shield, href: "/discord/admin" },
 ];
 
 const secondaryItems: NavItem[] = [
-  { label: "Settings", icon: Settings, href: "#" },
-  { label: "Logout", icon: LogOut, href: "#" },
+  { label: "Configuración", icon: Settings, href: "#" },
+  { label: "Cerrar sesión", icon: LogOut, href: "#" },
 ];
 
 function isItemActive(pathname: string, href: string) {

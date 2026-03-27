@@ -146,11 +146,11 @@ function emptySanctions() {
 
 function resolveStatus(sanctions: ReturnType<typeof emptySanctions>) {
   if (sanctions.total === 0) {
-    return { label: "Historial Limpio", severity: "clean" as const, score: 0 };
+    return { label: "Historial limpio", severity: "clean" as const, score: 0 };
   }
 
   if (sanctions.remocion > 0) {
-    return { label: "Critico", severity: "critical" as const, score: 4 };
+    return { label: "Crítico", severity: "critical" as const, score: 4 };
   }
 
   if (sanctions.suspension > 0 || sanctions.warnGrave >= 2) {

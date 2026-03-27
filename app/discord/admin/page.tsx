@@ -81,9 +81,9 @@ export default async function AdminPage() {
 
       <main className="relative z-10 px-4 pb-24 pt-24 sm:px-8 lg:pl-[19.5rem] lg:pr-8">
         <section className="mb-6">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Control Panel</p>
+          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Panel de control</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-neutral-white)] sm:text-3xl">
-            Panel de Administración
+            Panel de administración
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-[var(--color-neutral-grey)]">
             Gestiona sanciones: retira, actualiza o modifica registros de sanciones del equipo de soporte.

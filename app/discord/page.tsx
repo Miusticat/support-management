@@ -18,7 +18,7 @@ export default function DiscordPage() {
         <section className="mb-6">
           <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Bot Tools</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-neutral-white)] sm:text-3xl">
-            Anuncios Discord
+            Anuncios discord
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-[var(--color-neutral-grey)]">
             Centro de control para publicar anuncios del bot.

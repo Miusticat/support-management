@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
 
         <p className="text-sm leading-relaxed text-[var(--color-neutral-grey)]">
-          Inicia sesion con Discord para acceder al panel operativo, historial de sanciones y herramientas internas del equipo.
+          Inicia sesión con Discord para acceder al panel operativo, historial de sanciones y herramientas internas del equipo.
         </p>
 
         <div className="mt-7 space-y-3">

@@ -376,7 +376,7 @@ export async function PUT(request: Request) {
 
     if (existing.length > 0) {
       return NextResponse.json(
-        { error: "Tu evaluacion ya fue registrada y no se puede modificar." },
+        { error: "Tu evaluación ya fue registrada y no se puede modificar." },
         { status: 409 }
       );
     }

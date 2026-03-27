@@ -137,7 +137,7 @@ export function DiscordAnnouncementStudio() {
             Discord
           </p>
           <h2 className="mt-1 text-2xl font-semibold text-[var(--color-neutral-white)]">
-            Crear Anuncio
+            Crear anuncio
           </h2>
           <p className="mt-2 text-sm text-[var(--color-neutral-grey)]">
             Editor estilo Discohook para construir embeds y publicarlos por webhook.

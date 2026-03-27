@@ -412,10 +412,10 @@ export async function POST(request: Request) {
     }
 
     await sendDiscordAnnouncementWebhook(webhookUrl, {
-      title: "Registro de Sancion",
+      title: "Registro de sanción",
       description,
       colorHex: "#FF6B84",
-      footerText: "Support Management | Registro Interno",
+      footerText: "Support Management | Registro interno",
       content:
         mentionUserIds.length > 0
           ? `Mencionados: ${mentionUserIds.map((id) => `<@${id}>`).join(" ")}`
@@ -425,7 +425,7 @@ export async function POST(request: Request) {
 
     if (historyWebhookUrl) {
       await sendDiscordAnnouncementWebhook(historyWebhookUrl, {
-        title: "Historial | Registro de Sancion",
+        title: "Historial | Registro de sanción",
         description,
         colorHex: "#F59E0B",
         footerText: "Support Management | Historial",

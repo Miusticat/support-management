@@ -29,24 +29,24 @@ export default async function PromotionEvaluationPage() {
         <section className="mb-6">
           <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Team Control</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-neutral-white)] sm:text-3xl">
-            Evaluacion de Ascenso
+            Evaluación sobre ascensos
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-[var(--color-neutral-grey)]">
-            Evaluacion colaborativa exclusiva para Support Lead y Support Trainer sobre miembros del rango Support.
+            Evaluación colaborativa exclusiva para Support Lead y Support Trainer sobre miembros del rango Support.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
-              1. Selecciona support
+              1. Selecciona al Support
             </span>
             <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
-              2. Revisa historial
+              2. Revisa su historial
             </span>
             <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
-              3. Registra puntaje
+              3. Registra tu puntaje
             </span>
             <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-[var(--color-neutral-grey)]">
-              4. Decision automatica
+              4. Decisión automática
             </span>
           </div>
         </section>
