@@ -65,6 +65,31 @@ async function loadDashboardData() {
     }
   }
 
+  let totalSupportsInServer = 0;
+  try {
+    const supportCountResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
+      SELECT COUNT(DISTINCT "supportDiscordId") as count
+      FROM "StaffSanction"
+      UNION ALL
+      SELECT COUNT(DISTINCT "supportDiscordId") as count
+      FROM "SupportLifecycleState"
+    `;
+    const allSupportIds = new Set<string>();
+    for (const row of sanctionRows) {
+      if (row.supportDiscordId?.trim()) {
+        allSupportIds.add(row.supportDiscordId);
+      }
+    }
+    for (const row of lifecycleRows) {
+      if (row.supportDiscordId?.trim()) {
+        allSupportIds.add(row.supportDiscordId);
+      }
+    }
+    totalSupportsInServer = allSupportIds.size;
+  } catch {
+    totalSupportsInServer = uniqueSupports.size;
+  }
+
   const expulsadosOrRenuncias = lifecycleRows.filter((row) =>
     ["Expulsado", "Renuncio"].includes(row.manualStatus)
   ).length;
@@ -112,9 +137,9 @@ async function loadDashboardData() {
         gradient: "from-[var(--color-accent-green)]/35 via-[var(--color-accent-blue)]/20 to-[var(--color-primary)]/25",
       },
       {
-        title: "Sanciones Registradas",
-        value: String(sanctionRows.length),
-        description: "Total acumulado de sanciones en base de datos.",
+        title: "Total de Supports",
+        value: String(totalSupportsInServer),
+        description: "Total de supports activos en el servidor.",
         icon: AlertTriangle,
         gradient: "from-[var(--color-primary)]/38 via-[var(--color-accent-blue)]/20 to-[var(--color-accent-sky)]/15",
       },
