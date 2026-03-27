@@ -416,6 +416,7 @@ export function PromotionEvaluationPanel() {
                 ) : null}
               </div>
             </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
               {!selectedSupport ? (
                 <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-8 text-center">
                   <CircleDot className="mx-auto h-6 w-6 text-[var(--color-neutral-grey)]" />
@@ -582,6 +583,7 @@ export function PromotionEvaluationPanel() {
                   )}
                 </>
               )}
+            </div>
           </div>
         ) : null}
       </UICard>
