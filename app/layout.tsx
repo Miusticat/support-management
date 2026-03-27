@@ -9,8 +9,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "GameShelf Dashboard",
-  description: "Futuristic gaming analytics dashboard",
+  title: "Support Management",
+  description: "Support team operations and analytics dashboard",
+  icons: {
+    icon: "/img/logo.png",
+    shortcut: "/img/logo.png",
+    apple: "/img/logo.png",
+  },
 };
 
 export default function RootLayout({
