@@ -166,9 +166,9 @@ export function SupportsOverviewPanel() {
 
   const totals = useMemo(
     () => ({
-      all: supports.length,
-      clean: supports.filter((item) => item.status.severity === "clean").length,
-      risk: supports.filter((item) => ["high", "critical"].includes(item.status.severity)).length,
+      all: supports.filter((item) => item.role === "Support").length,
+      clean: supports.filter((item) => item.status.severity === "clean" && item.role === "Support").length,
+      risk: supports.filter((item) => ["high", "critical"].includes(item.status.severity) && item.role === "Support").length,
     }),
     [supports]
   );
