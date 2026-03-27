@@ -425,32 +425,44 @@ export function PromotionEvaluationPanel() {
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-[var(--color-neutral-grey)]">
-                        <Users className="h-3.5 w-3.5" />
-                        Support seleccionado
-                      </p>
-                      <h3 className="mt-1 text-lg font-semibold text-[var(--color-neutral-white)]">{selectedSupport.displayName}</h3>
-                      <p className="text-xs text-[var(--color-neutral-grey)]">
-                        {selectedSupport.username ? `@${selectedSupport.username}` : selectedSupport.id}
-                      </p>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-[var(--color-neutral-white)]">{selectedSupport.displayName}</h3>
+                        <p className="mt-0.5 text-xs text-[var(--color-neutral-grey)]">
+                          {selectedSupport.username ? `@${selectedSupport.username}` : selectedSupport.id}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 inline-flex rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${decisionClassMap[selectedSupport.decision]} ${decisionAccentMap[selectedSupport.decision]}`}>
+                        {selectedSupport.decision}
+                      </span>
                     </div>
 
-                    <span className={`inline-flex rounded-md border bg-linear-to-r px-2.5 py-1 text-xs font-medium ${decisionClassMap[selectedSupport.decision]} ${decisionAccentMap[selectedSupport.decision]}`}>
-                      Estado: {selectedSupport.decision}
-                    </span>
+                    <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]">Evaluaciones</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
+                          {selectedSupport.completedEvaluations}/{selectedSupport.requiredEvaluations}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]">Promedio</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--color-accent-yellow)]">
+                          {selectedSupport.averageScore !== null ? selectedSupport.averageScore.toFixed(1) : "-"}/10
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   {activePanel === "sanctions" ? (
-                    <div className="mt-4 max-h-48 space-y-2 overflow-auto">
+                    <div className="mt-4 max-h-48 space-y-2 overflow-auto rounded-lg border border-white/10 bg-white/[0.02] p-3">
                       {selectedSupport.sanctionsSummary.hasSanctions ? (
                         <table className="w-full text-[10px]">
                           <tbody>
                             {selectedSupport.sanctionsSummary.latest.map((item, index) => (
-                              <tr key={index} className="border-b border-white/10 text-[var(--color-neutral-grey)]">
-                                <td className="py-1">{item.fecha || "-"}</td>
-                                <td className="py-1 text-[var(--color-neutral-white)]">{item.appliedSanction}</td>
+                              <tr key={index} className="border-b border-white/10 text-[var(--color-neutral-grey)] last:border-0">
+                                <td className="py-2">{item.fecha || "-"}</td>
+                                <td className="py-2 text-[var(--color-neutral-white)]">{item.appliedSanction}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -460,22 +472,42 @@ export function PromotionEvaluationPanel() {
                       )}
                     </div>
                   ) : (
-                    <div className="mt-4 space-y-3">
+                    <div className="mt-4 space-y-4">
                       {selectedSupport.myEvaluation ? (
-                        <div className="rounded-lg border border-[var(--color-accent-green)]/35 bg-[var(--color-accent-green)]/10 p-3">
-                          <p className="text-xs font-medium text-[var(--color-neutral-white)]">
-                            Evaluación registrada: {selectedSupport.myEvaluation.score}/10
-                          </p>
-                          <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
-                            {selectedSupport.myEvaluation.notes || "Sin observaciones"}
-                          </p>
+                        <div className="rounded-lg border border-[var(--color-accent-green)]/35 bg-[var(--color-accent-green)]/10 p-4">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent-green)]">
+                                ✓ Evaluación completada
+                              </p>
+                              <p className="mt-2 text-lg font-bold text-[var(--color-neutral-white)]">
+                                {selectedSupport.myEvaluation.score}/10
+                              </p>
+                            </div>
+                          </div>
+                          {selectedSupport.myEvaluation.notes && (
+                            <p className="mt-3 border-t border-[var(--color-accent-green)]/20 pt-3 text-xs text-[var(--color-neutral-grey)]">
+                              {selectedSupport.myEvaluation.notes}
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs font-medium text-[var(--color-neutral-white)]">Puntaje</label>
-                              <span className="text-sm font-semibold text-[var(--color-accent-yellow)]">{selectedScore}/10</span>
+                          <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">
+                                Mi evaluación
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-2xl font-bold ${
+                                  selectedScore >= 7 ? "text-[var(--color-accent-green)]" :
+                                  selectedScore >= 5 ? "text-[var(--color-accent-yellow)]" :
+                                  "text-[var(--color-accent-red)]"
+                                }`}>
+                                  {selectedScore}
+                                </span>
+                                <span className="text-xs text-[var(--color-neutral-grey)]">/10</span>
+                              </div>
                             </div>
 
                             <input
@@ -490,44 +522,58 @@ export function PromotionEvaluationPanel() {
                                   [selectedSupport.id]: clampScore(Number(e.target.value)),
                                 }))
                               }
-                              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/10"
+                              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/10 accent-[var(--color-accent-blue)]"
                             />
 
-                            <div className="flex justify-between text-[10px] text-[var(--color-neutral-grey)]">
-                              <span>No aprueba</span>
-                              <span>Condicional</span>
-                              <span>Aprueba</span>
+                            <div className="grid grid-cols-3 gap-1 pt-1 text-[10px]">
+                              <div className="text-center">
+                                <p className="text-[var(--color-accent-red)]">1-4</p>
+                                <p className="text-[var(--color-neutral-grey)]">No aprueba</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-[var(--color-accent-yellow)]">5-6</p>
+                                <p className="text-[var(--color-neutral-grey)]">Condicional</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-[var(--color-accent-green)]">7-10</p>
+                                <p className="text-[var(--color-neutral-grey)]">Aprueba</p>
+                              </div>
                             </div>
                           </div>
 
-                          <textarea
-                            value={notesDraft[selectedSupport.id] ?? ""}
-                            onChange={(e) =>
-                              setNotesDraft((prev) => ({
-                                ...prev,
-                                [selectedSupport.id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Observaciones (opcional)"
-                            className="min-h-16 w-full rounded-lg border border-white/10 bg-[#0f1426] px-2 py-1.5 text-xs text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-primary)]/60"
-                          />
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">
+                              Observaciones
+                            </label>
+                            <textarea
+                              value={notesDraft[selectedSupport.id] ?? ""}
+                              onChange={(e) =>
+                                setNotesDraft((prev) => ({
+                                  ...prev,
+                                  [selectedSupport.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="Ingresa tu evaluación, contexto, o razón de tu puntaje..."
+                              className="min-h-20 w-full rounded-lg border border-white/10 bg-[#0f1426]/80 px-3 py-2.5 text-xs text-[var(--color-neutral-white)] placeholder-[var(--color-neutral-grey)]/60 outline-none transition focus:border-[var(--color-accent-blue)]/60 focus:bg-[#0f1426]"
+                            />
+                          </div>
 
                           <button
                             type="button"
                             onClick={() => saveEvaluation(selectedSupport.id)}
                             disabled={savingId === selectedSupport.id}
-                            className="w-full rounded-lg border border-[var(--color-accent-blue)]/35 bg-[var(--color-accent-blue)]/15 px-3 py-2 text-xs font-medium text-[var(--color-neutral-white)] transition-colors hover:bg-[var(--color-accent-blue)]/25 disabled:opacity-60"
+                            className="w-full rounded-lg border border-[var(--color-accent-blue)]/40 bg-[var(--color-accent-blue)]/20 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-neutral-white)] transition-all hover:border-[var(--color-accent-blue)]/60 hover:bg-[var(--color-accent-blue)]/30 disabled:opacity-50"
                           >
-                            {savingId === selectedSupport.id ? "Guardando..." : "Guardar evaluación"}
+                            {savingId === selectedSupport.id ? "Guardando evaluación..." : "Guardar evaluación"}
                           </button>
 
                           {selectedSupport.sanctionsSummary.hasSanctions ? (
                             <button
                               type="button"
                               onClick={() => setActivePanel("sanctions")}
-                              className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] text-[var(--color-neutral-white)] hover:bg-white/10"
+                              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-neutral-grey)] transition hover:border-white/20 hover:bg-white/10 hover:text-[var(--color-neutral-white)]"
                             >
-                              Ver sanciones ({selectedSupport.sanctionsSummary.total})
+                              Ver historial de sanciones • {selectedSupport.sanctionsSummary.total}
                             </button>
                           ) : null}
                         </>
