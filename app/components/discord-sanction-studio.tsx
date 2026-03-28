@@ -337,42 +337,36 @@ export function DiscordSanctionStudio() {
   }, [prevAdvertencias, prevWarnIntermedios, prevWarnGraves, sancion]);
 
   const previewDescription = useMemo(() => {
-    return [
-      `### Fecha:\n${fecha || "(DD/MM/AA)"}`,
-      "### Datos del Admin que sanciona:",
-      `* Trainer/Admin que sanciona: ${adminMentionPreview} (${adminSanciona || "-"})`,
-      "### Datos del Support:",
-      `* Support Sancionado: ${supportMentionPreview} (${supportSancionado || "-"})`,
-      `* Link de PCU: ${supportPcuLink || "-"}`,
-      "",
-      "**Motivo:**",
-      motivo || "(Explicacion clara de lo ocurrido)",
-      "",
-      "**Tabla de evaluacion:**",
-      `Bloque: ${policyCategory || "-"}`,
-      `Falta: ${policyFault || "-"}`,
-      "",
-      "**Categoria (Puede elegir una o varias segun aplique):**",
-      categoriasText,
-      "",
-      "**Pruebas:**",
-      pruebas || "-",
-      "",
-      "**Sancion solicitada:**",
-      `${sancion} (${levelText})`,
-      "",
-      "**Sancion final aplicada:**",
-      `${previewFinalSanction} (${previewFinalLevel})`,
-      "",
-      "**Acumulacion:**",
-      `Advertencias previas: ${prevAdvertencias}`,
-      `Warn Intermedios previos: ${prevWarnIntermedios}`,
-      `Warn Graves previos: ${prevWarnGraves}`,
-      accumulationNote,
-      "",
-      "**Observaciones:**",
-      observaciones || "-",
-    ].join("\n");
+    return {
+      adminBlock: [
+        `### Fecha:\n${fecha || "(DD/MM/AA)"}`,
+        `### Datos del Admin que sanciona:`,
+        `* Trainer/Admin que sanciona: ${adminMentionPreview} (${adminSanciona || "-"})`,
+      ].join("\n"),
+      supportBlock: [
+        `### Datos del Support:`,
+        `* Support Sancionado: ${supportMentionPreview} (${supportSancionado || "-"})`,
+        `* Link de PCU: ${supportPcuLink || "-"}`,
+      ].join("\n"),
+      motivoBlock: `**Motivo:**\n${motivo || "(Explicacion clara de lo ocurrido)"}`,
+      evalFields: [
+        { name: "Bloque evaluacion", value: policyCategory || "-" },
+        { name: "Falta", value: policyFault || "-" },
+        { name: "Categorias", value: categoriasText },
+      ],
+      pruebasBlock: `**Pruebas:**\n${pruebas || "-"}`,
+      sanctionFields: [
+        { name: "Sancion solicitada", value: `${sancion} (${levelText})` },
+        { name: "Sancion final aplicada", value: `${previewFinalSanction} (${previewFinalLevel})` },
+      ],
+      accumulationFields: [
+        { name: "Advertencias previas", value: String(prevAdvertencias) },
+        { name: "Warn Intermedios previos", value: String(prevWarnIntermedios) },
+        { name: "Warn Graves previos", value: String(prevWarnGraves) },
+      ],
+      accumulationNoteText: accumulationNote,
+      observacionesBlock: `**Observaciones:**\n${observaciones || "-"}`,
+    };
   }, [
     fecha,
     adminMentionPreview,
@@ -1055,7 +1049,7 @@ export function DiscordSanctionStudio() {
 
       <UICard className="xl:col-span-5 p-6">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Preview</p>
+          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Preview — Components v2</p>
           <button
             type="button"
             onClick={copyPreview}
@@ -1066,34 +1060,108 @@ export function DiscordSanctionStudio() {
           </button>
         </div>
         {copyStatus ? <p className="mt-2 text-xs text-[var(--color-accent-green)]">{copyStatus}</p> : null}
-        <div className="mt-3 rounded-xl border border-white/10 bg-[#313338] p-4 text-[#dbdee1]">
-          <div className="flex items-start gap-3">
-            <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#5865f2] text-xs font-semibold text-white">
+        <div className="mt-3 rounded-xl border border-white/[0.06] bg-[#2b2d31] p-4">
+          {/* Bot identity */}
+          <div className="mb-3 flex items-center gap-2">
+            <div className="grid h-6 w-6 place-items-center rounded-full bg-[#5865f2] text-[8px] font-bold text-white">
               SM
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-[#f2f3f5]">Support Management</p>
-                <span className="rounded bg-[#5865f2] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                  Bot
-                </span>
-                <p className="text-xs text-[#949ba4]">Ahora</p>
-              </div>
+            <span className="text-sm font-semibold text-[#f2f3f5]">Support Management</span>
+            <span className="rounded bg-[#5865f2] px-1 py-0.5 text-[10px] font-medium text-white">BOT</span>
+            <span className="text-xs text-[#949ba4]">Ahora</span>
+          </div>
 
-              {previewMentionsText ? (
-                <p className="mt-1 text-sm text-[#dbdee1] whitespace-pre-wrap">{previewMentionsText}</p>
-              ) : null}
+          {/* Content above (mentions) */}
+          {previewMentionsText && (
+            <p className="mb-3 text-sm text-[#dbdee1]">{previewMentionsText}</p>
+          )}
 
-              <div className="mt-2 overflow-hidden rounded-md border border-[#1e1f22] bg-[#2b2d31]">
-                <div className="flex">
-                  <div className="w-1 shrink-0 bg-[#ff6b84]" />
-                  <div className="min-w-0 flex-1 p-3.5">
-                    <p className="text-[15px] font-semibold text-[#ffffff]">Registro de Sancion</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#dbdee1]">{previewDescription}</p>
-                    <p className="mt-3 text-xs text-[#949ba4]">Support Management | Registro Interno</p>
+          {/* Container with accent color */}
+          <div
+            className="overflow-hidden rounded-lg"
+            style={{ background: "#1e1f22", borderLeft: "3px solid #ff6b84" }}
+          >
+            <div className="p-4 space-y-3">
+              {/* Title */}
+              <h3 className="text-base font-bold text-[#f2f3f5]">Registro de Sancion</h3>
+
+              {/* Admin block */}
+              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
+                {previewDescription.adminBlock}
+              </p>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Support block */}
+              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
+                {previewDescription.supportBlock}
+              </p>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Motivo */}
+              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
+                {previewDescription.motivoBlock}
+              </p>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Eval fields */}
+              <div className="grid grid-cols-3 gap-2">
+                {previewDescription.evalFields.map((f, i) => (
+                  <div key={i}>
+                    <p className="text-xs font-semibold text-[#f2f3f5]">{f.name}</p>
+                    <p className="text-xs text-[#dbdee1]">{f.value}</p>
                   </div>
-                </div>
+                ))}
               </div>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Pruebas */}
+              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
+                {previewDescription.pruebasBlock}
+              </p>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Sanction fields */}
+              <div className="grid grid-cols-2 gap-2">
+                {previewDescription.sanctionFields.map((f, i) => (
+                  <div key={i}>
+                    <p className="text-xs font-semibold text-[#f2f3f5]">{f.name}</p>
+                    <p className="text-xs text-[#dbdee1]">{f.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Accumulation fields */}
+              <div className="grid grid-cols-3 gap-2">
+                {previewDescription.accumulationFields.map((f, i) => (
+                  <div key={i}>
+                    <p className="text-xs font-semibold text-[#f2f3f5]">{f.name}</p>
+                    <p className="text-xs text-[#dbdee1]">{f.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Accumulation note as blockquote */}
+              <div className="border-l-2 border-white/[0.15] pl-3 py-0.5">
+                <p className="text-xs text-[#dbdee1]/80">{previewDescription.accumulationNoteText}</p>
+              </div>
+
+              <div className="border-t border-white/[0.06]" />
+
+              {/* Observaciones */}
+              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
+                {previewDescription.observacionesBlock}
+              </p>
+
+              {/* Footer */}
+              <div className="border-t border-white/[0.06]" />
+              <p className="text-[11px] text-[#949ba4]">Support Management | Registro interno</p>
             </div>
           </div>
         </div>

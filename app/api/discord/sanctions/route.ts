@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { canAccessSanctionsByRole } from "@/lib/discord-staff-roles";
-import { sendDiscordAnnouncementWebhook } from "@/lib/discord-webhook";
+import { sendDiscordComponentsV2Webhook, type ComponentsV2Input } from "@/lib/discord-webhook";
 import { prisma } from "@/lib/prisma";
 
 type SanctionRequestBody = {
@@ -61,10 +61,6 @@ async function isAuthorizedBySession() {
   }
 
   return session.user.discordGuildId === requiredGuildId;
-}
-
-function markdownBlock(label: string, value: string) {
-  return `### ${label}:\n${value.trim() || "-"}`;
 }
 
 function asMention(discordId?: string, fallbackName?: string) {
@@ -275,42 +271,90 @@ export async function POST(request: Request) {
     (id): id is string => Boolean(id && /^\d{17,20}$/.test(id))
   );
 
-  const description = [
-    markdownBlock("Fecha", body.fecha),
-    "### Datos del Admin que sanciona:",
-    `* Trainer/Admin que sanciona: ${adminMention} (${body.adminSanciona})`,
-    "### Datos del Support:",
-    `* Support Sancionado: ${supportMention} (${body.supportSancionado})`,
-    `* Link de PCU: ${body.supportPcuLink?.trim() || "-"}`,
-    "",
-    "**Motivo:**",
-    body.motivo,
-    "",
-    "**Tabla de evaluacion:**",
-    `Bloque: ${body.policyCategory?.trim() || "-"}`,
-    `Falta: ${body.policyFault?.trim() || "-"}`,
-    "",
-    "**Categoria (Puede elegir una o varias segun aplique):**",
-    categorias,
-    "",
-    "**Pruebas:**",
-    body.pruebas?.trim() || "-",
-    "",
-    "**Sancion solicitada:**",
-    `${body.sancion} (${sanctionLevelLabel(body.sancion)})`,
-    "",
-    "**Sancion final aplicada:**",
-    `${finalSanction} (${finalLevel})`,
-    "",
-    "**Acumulacion:**",
-    `Advertencias previas: ${counts.advertencias}`,
-    `Warn Intermedios previos: ${counts.warnIntermedios}`,
-    `Warn Graves previos: ${counts.warnGraves}`,
-    resolution.note,
-    "",
-    "**Observaciones:**",
-    body.observaciones?.trim() || "-",
-  ].join("\n");
+  const mentionsContent = mentionUserIds.length > 0
+    ? mentionUserIds.map((id) => `<@${id}>`).join(" ")
+    : undefined;
+
+  function buildSanctionPayload(opts: {
+    title: string;
+    accentColor: string;
+    footer: string;
+    contentAbove?: string;
+  }): ComponentsV2Input {
+    return {
+      accentColorHex: opts.accentColor,
+      title: opts.title,
+      contentAbove: opts.contentAbove,
+      footerText: opts.footer,
+      mentionUserIds,
+      blocks: [
+        {
+          type: "text",
+          content: [
+            `### Fecha:\n${body.fecha}`,
+            `### Datos del Admin que sanciona:`,
+            `* Trainer/Admin que sanciona: ${adminMention} (${body.adminSanciona})`,
+          ].join("\n"),
+        },
+        {
+          type: "text",
+          content: [
+            `### Datos del Support:`,
+            `* Support Sancionado: ${supportMention} (${body.supportSancionado})`,
+            `* Link de PCU: ${body.supportPcuLink?.trim() || "-"}`,
+          ].join("\n"),
+        },
+        {
+          type: "text",
+          content: [
+            "**Motivo:**",
+            body.motivo,
+          ].join("\n"),
+        },
+        {
+          type: "fields",
+          fields: [
+            { name: "Bloque evaluacion", value: body.policyCategory?.trim() || "-", inline: true },
+            { name: "Falta", value: body.policyFault?.trim() || "-", inline: true },
+            { name: "Categorias", value: categorias, inline: true },
+          ],
+        },
+        {
+          type: "text",
+          content: [
+            "**Pruebas:**",
+            body.pruebas?.trim() || "-",
+          ].join("\n"),
+        },
+        {
+          type: "fields",
+          fields: [
+            { name: "Sancion solicitada", value: `${body.sancion} (${sanctionLevelLabel(body.sancion)})`, inline: true },
+            { name: "Sancion final aplicada", value: `${finalSanction} (${finalLevel})`, inline: true },
+          ],
+        },
+        {
+          type: "fields",
+          fields: [
+            { name: "Advertencias previas", value: String(counts.advertencias), inline: true },
+            { name: "Warn Intermedios previos", value: String(counts.warnIntermedios), inline: true },
+            { name: "Warn Graves previos", value: String(counts.warnGraves), inline: true },
+          ],
+        },
+        {
+          type: "text",
+          content: `> ${resolution.note}`,
+        },
+        {
+          type: "text",
+          content: [
+            "**Observaciones:**",
+            body.observaciones?.trim() || "-",
+          ].join("\n"),
+        },
+      ],
+    };
+  }
 
   try {
     const delegate = (prisma as unknown as {
@@ -411,30 +455,28 @@ export async function POST(request: Request) {
       `;
     }
 
-    await sendDiscordAnnouncementWebhook(webhookUrl, {
-      title: "Registro de sanción",
-      description,
-      colorHex: "#FF6B84",
-      footerText: "Support Management | Registro interno",
-      content:
-        mentionUserIds.length > 0
-          ? `Mencionados: ${mentionUserIds.map((id) => `<@${id}>`).join(" ")}`
-          : "",
-      mentionUserIds,
-    });
+    await sendDiscordComponentsV2Webhook(
+      webhookUrl,
+      buildSanctionPayload({
+        title: "Registro de sanción",
+        accentColor: "#FF6B84",
+        footer: "Support Management | Registro interno",
+        contentAbove: mentionsContent,
+      })
+    );
 
     if (historyWebhookUrl) {
-      await sendDiscordAnnouncementWebhook(historyWebhookUrl, {
-        title: "Historial | Registro de sanción",
-        description,
-        colorHex: "#F59E0B",
-        footerText: "Support Management | Historial",
-        content:
-          mentionUserIds.length > 0
-            ? `Historial actualizado: ${mentionUserIds.map((id) => `<@${id}>`).join(" ")}`
+      await sendDiscordComponentsV2Webhook(
+        historyWebhookUrl,
+        buildSanctionPayload({
+          title: "Historial | Registro de sanción",
+          accentColor: "#F59E0B",
+          footer: "Support Management | Historial",
+          contentAbove: mentionsContent
+            ? `Historial actualizado: ${mentionsContent}`
             : "Historial actualizado",
-        mentionUserIds,
-      });
+        })
+      );
     }
 
     return NextResponse.json({
