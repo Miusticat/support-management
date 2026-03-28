@@ -2,25 +2,33 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { canAccessSanctionsByRole } from "@/lib/discord-staff-roles";
-import { sendDiscordAnnouncementWebhook } from "@/lib/discord-webhook";
+import { sendDiscordComponentsV2Webhook, type ComponentsV2Input } from "@/lib/discord-webhook";
 
 type AnnounceRequestBody = {
   title?: string;
   description?: string;
-  colorHex?: string;
-  url?: string;
-  authorName?: string;
-  authorIconUrl?: string;
+  accentColorHex?: string;
   thumbnailUrl?: string;
   imageUrl?: string;
   footerText?: string;
-  footerIconUrl?: string;
   fields?: Array<{
     name: string;
     value: string;
     inline?: boolean;
   }>;
-  content?: string;
+  buttons?: Array<{
+    label: string;
+    url?: string;
+    style?: 1 | 2 | 3 | 4 | 5;
+    emoji?: string;
+  }>;
+  sections?: Array<{
+    text: string;
+    thumbnailUrl?: string;
+    buttonLabel?: string;
+    buttonUrl?: string;
+  }>;
+  contentAbove?: string;
 };
 
 function isAuthorizedByKey(request: Request) {
@@ -85,28 +93,28 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!body.title || !body.description) {
+  if (!body.title && !body.description) {
     return NextResponse.json(
-      { error: "title and description are required" },
+      { error: "title or description is required" },
       { status: 400 }
     );
   }
 
   try {
-    await sendDiscordAnnouncementWebhook(webhookUrl, {
+    const payload: ComponentsV2Input = {
+      accentColorHex: body.accentColorHex,
       title: body.title,
       description: body.description,
-      colorHex: body.colorHex,
-      url: body.url,
-      authorName: body.authorName,
-      authorIconUrl: body.authorIconUrl,
       thumbnailUrl: body.thumbnailUrl,
       imageUrl: body.imageUrl,
       footerText: body.footerText,
-      footerIconUrl: body.footerIconUrl,
       fields: body.fields,
-      content: body.content,
-    });
+      buttons: body.buttons,
+      sections: body.sections,
+      contentAbove: body.contentAbove,
+    };
+
+    await sendDiscordComponentsV2Webhook(webhookUrl, payload);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
