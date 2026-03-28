@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { AlertTriangle, Filter, Search, Shield, Users } from "lucide-react";
 import { UICard } from "@/app/components/ui-card";
 
 type SanctionItem = {
@@ -26,6 +26,23 @@ type SupportAggregate = {
   total: number;
   warnGraveOrHigher: number;
 };
+
+function sanctionBadgeClasses(sanction: string): string {
+  switch (sanction) {
+    case "Advertencia":
+      return "bg-yellow-500/15 text-yellow-400 border-yellow-500/30";
+    case "Warn Intermedio":
+      return "bg-orange-500/15 text-orange-400 border-orange-500/30";
+    case "Warn Grave":
+      return "bg-red-500/15 text-red-400 border-red-500/30";
+    case "Suspension":
+      return "bg-red-600/20 text-red-300 border-red-600/30";
+    case "Remocion":
+      return "bg-red-900/25 text-red-200 border-red-900/40";
+    default:
+      return "bg-white/5 text-[var(--color-neutral-grey)] border-white/10";
+  }
+}
 
 function asDate(value: Date) {
   return new Date(value).toLocaleString("es-ES", {
@@ -103,22 +120,42 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <UICard className="p-5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Total sanciones</p>
+          <div className="flex items-center gap-2">
+            <div className="grid h-7 w-7 place-items-center rounded-lg bg-white/[0.05]">
+              <Shield className="h-3.5 w-3.5 text-[var(--color-neutral-grey)]" />
+            </div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Total sanciones</p>
+          </div>
           <p className="mt-2 text-3xl font-bold text-[var(--color-neutral-white)]">{sanctions.length}</p>
         </UICard>
 
         <UICard className="p-5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Supports sancionados</p>
+          <div className="flex items-center gap-2">
+            <div className="grid h-7 w-7 place-items-center rounded-lg bg-white/[0.05]">
+              <Users className="h-3.5 w-3.5 text-[var(--color-neutral-grey)]" />
+            </div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Supports sancionados</p>
+          </div>
           <p className="mt-2 text-3xl font-bold text-[var(--color-neutral-white)]">{supportsRanking.length}</p>
         </UICard>
 
         <UICard className="p-5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Reincidentes</p>
+          <div className="flex items-center gap-2">
+            <div className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--color-accent-orange)]/10">
+              <AlertTriangle className="h-3.5 w-3.5 text-[var(--color-accent-orange)]" />
+            </div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Reincidentes</p>
+          </div>
           <p className="mt-2 text-3xl font-bold text-[var(--color-accent-orange)]">{reincidentes.length}</p>
         </UICard>
 
         <UICard className="p-5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">En vista filtrada</p>
+          <div className="flex items-center gap-2">
+            <div className="grid h-7 w-7 place-items-center rounded-lg bg-white/[0.05]">
+              <Filter className="h-3.5 w-3.5 text-[var(--color-neutral-grey)]" />
+            </div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">En vista filtrada</p>
+          </div>
           <p className="mt-2 text-3xl font-bold text-[var(--color-accent-blue)]">{filtered.length}</p>
         </UICard>
       </div>
@@ -172,8 +209,12 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
                     <td className="px-3 py-2 text-[var(--color-neutral-grey)]">{asDate(row.createdAt)}</td>
                     <td className="px-3 py-2 text-[var(--color-neutral-white)]">{row.supportName}</td>
                     <td className="px-3 py-2 text-[var(--color-neutral-grey)]">{row.adminName}</td>
-                    <td className="px-3 py-2 text-[var(--color-neutral-grey)]">{row.requestedSanction}</td>
-                    <td className="px-3 py-2 text-[var(--color-accent-red)]">{row.appliedSanction}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block rounded-md border px-2 py-0.5 text-xs font-medium ${sanctionBadgeClasses(row.requestedSanction)}`}>{row.requestedSanction}</span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-block rounded-md border px-2 py-0.5 text-xs font-medium ${sanctionBadgeClasses(row.appliedSanction)}`}>{row.appliedSanction}</span>
+                    </td>
                     <td className="px-3 py-2 text-[var(--color-neutral-grey)]">{row.accumulationNote ?? "-"}</td>
                   </tr>
                 ))}
@@ -202,12 +243,20 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
                 key={item.supportDiscordId}
                 className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-white/[0.1] hover:bg-white/[0.03]"
               >
-                <p className="text-sm font-medium text-[var(--color-neutral-white)]">
-                  #{index + 1} {item.supportName}
-                </p>
-                <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
-                  Total: {item.total} | Grave o superior: {item.warnGraveOrHigher}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-[var(--color-neutral-white)]">
+                    <span className="text-[var(--color-neutral-grey)]">#{index + 1}</span> {item.supportName}
+                  </p>
+                  <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-xs font-bold text-[var(--color-neutral-white)]">{item.total}</span>
+                </div>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div className="h-1 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div className="h-full rounded-full bg-[var(--color-accent-red)]" style={{ width: `${Math.min(100, (item.warnGraveOrHigher / Math.max(item.total, 1)) * 100)}%` }} />
+                  </div>
+                  <p className="whitespace-nowrap text-[10px] text-[var(--color-neutral-grey)]">
+                    {item.warnGraveOrHigher} grave+
+                  </p>
+                </div>
               </div>
             ))}
 

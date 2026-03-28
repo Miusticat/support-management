@@ -146,6 +146,23 @@ function sanctionLevelLabel(sanction: string) {
   }
 }
 
+function sanctionAccentColor(sanction: string): string {
+  switch (sanction) {
+    case "Advertencia":
+      return "#fbbf24";
+    case "Warn Intermedio":
+      return "#f97316";
+    case "Warn Grave":
+      return "#ef4444";
+    case "Suspension":
+      return "#dc2626";
+    case "Remocion":
+      return "#991b1b";
+    default:
+      return "#ff6b84";
+  }
+}
+
 function isValidDateFormat(value: string) {
   if (!/^\d{2}\/\d{2}\/\d{2}$/.test(value)) {
     return false;
@@ -278,6 +295,10 @@ export function DiscordSanctionStudio() {
   );
   const previewFinalLevel = useMemo(
     () => sanctionLevelLabel(previewFinalSanction),
+    [previewFinalSanction]
+  );
+  const previewAccentColor = useMemo(
+    () => sanctionAccentColor(previewFinalSanction),
     [previewFinalSanction]
   );
   const adminMentionPreview = useMemo(
@@ -866,7 +887,9 @@ export function DiscordSanctionStudio() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">4. Evaluación de la falta</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="space-y-2">
               <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Bloque de evaluacion</span>
               <select
@@ -897,8 +920,11 @@ export function DiscordSanctionStudio() {
                 ))}
               </select>
             </label>
+            </div>
           </div>
 
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">5. Motivo</p>
           <label className="space-y-2 block">
             <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Motivo</span>
             <textarea
@@ -912,7 +938,10 @@ export function DiscordSanctionStudio() {
               Redacta de forma objetiva, profesional y centrada en hechos verificables.
             </p>
           </label>
+          </div>
 
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">6. Categorías</p>
           <div className="space-y-2">
             <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Categorias</span>
             <div className="flex flex-wrap gap-2">
@@ -935,7 +964,10 @@ export function DiscordSanctionStudio() {
               })}
             </div>
           </div>
+          </div>
 
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">7. Pruebas y sanción</p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="space-y-2">
               <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Pruebas</span>
@@ -972,9 +1004,10 @@ export function DiscordSanctionStudio() {
               ) : null}
             </label>
           </div>
+          </div>
 
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Acumulacion y antecedentes</p>
+            <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">8. Acumulación y antecedentes</p>
             {historyLoading ? (
               <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">Cargando antecedentes desde BD...</p>
             ) : null}
@@ -1013,15 +1046,15 @@ export function DiscordSanctionStudio() {
             <p className="mt-3 text-xs text-[var(--color-accent-orange)]">{accumulationNote}</p>
           </div>
 
-          <label className="space-y-2 block">
-            <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Observaciones</span>
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">9. Observaciones</p>
             <textarea
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
               className="min-h-20 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
               placeholder="Contexto adicional, actitud, historial previo..."
             />
-          </label>
+          </div>
 
           <button
             type="submit"
@@ -1079,11 +1112,14 @@ export function DiscordSanctionStudio() {
           {/* Container with accent color */}
           <div
             className="overflow-hidden rounded-lg"
-            style={{ background: "#1e1f22", borderLeft: "3px solid #ff6b84" }}
+            style={{ background: "#1e1f22", borderLeft: `3px solid ${previewAccentColor}` }}
           >
             <div className="p-4 space-y-3">
               {/* Title */}
-              <h3 className="text-base font-bold text-[#f2f3f5]">Registro de Sancion</h3>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: previewAccentColor }} />
+                <h3 className="text-base font-bold text-[#f2f3f5]">Registro de Sanción</h3>
+              </div>
 
               {/* Admin block */}
               <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
@@ -1127,12 +1163,16 @@ export function DiscordSanctionStudio() {
 
               {/* Sanction fields */}
               <div className="grid grid-cols-2 gap-2">
-                {previewDescription.sanctionFields.map((f, i) => (
-                  <div key={i}>
-                    <p className="text-xs font-semibold text-[#f2f3f5]">{f.name}</p>
-                    <p className="text-xs text-[#dbdee1]">{f.value}</p>
-                  </div>
-                ))}
+                <div>
+                  <p className="text-xs font-semibold text-[#f2f3f5]">Sanción solicitada</p>
+                  <p className="text-xs text-[#dbdee1]">{sancion} ({levelText})</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-[#f2f3f5]">Sanción final aplicada</p>
+                  <span className="mt-0.5 inline-block rounded px-1.5 py-0.5 text-xs font-semibold" style={{ color: previewAccentColor, backgroundColor: `${previewAccentColor}20` }}>
+                    {previewFinalSanction} ({previewFinalLevel})
+                  </span>
+                </div>
               </div>
 
               <div className="border-t border-white/[0.06]" />

@@ -88,6 +88,23 @@ function sanctionLevelLabel(sanction: string) {
   }
 }
 
+function sanctionAccentHex(sanction: string): string {
+  switch (sanction) {
+    case "Advertencia":
+      return "#FBBF24";
+    case "Warn Intermedio":
+      return "#F97316";
+    case "Warn Grave":
+      return "#EF4444";
+    case "Suspension":
+      return "#DC2626";
+    case "Remocion":
+      return "#991B1B";
+    default:
+      return "#FF6B84";
+  }
+}
+
 function getAccumulationCounts(sanctions: { appliedSanction: string }[]): SanctionCounts {
   const counts: SanctionCounts = {
     advertencias: 0,
@@ -293,10 +310,11 @@ export async function POST(request: Request) {
           type: "text",
           content: [
             `### Fecha:\n${body.fecha}`,
-            `### Datos del Admin que sanciona:`,
+            `### Admin que sanciona:`,
             `* Trainer/Admin que sanciona: ${adminMention} (${body.adminSanciona})`,
           ].join("\n"),
         },
+        { type: "separator", divider: true, spacing: 1 },
         {
           type: "text",
           content: [
@@ -305,6 +323,7 @@ export async function POST(request: Request) {
             `* Link de PCU: ${body.supportPcuLink?.trim() || "-"}`,
           ].join("\n"),
         },
+        { type: "separator", divider: true, spacing: 1 },
         {
           type: "text",
           content: [
@@ -312,12 +331,13 @@ export async function POST(request: Request) {
             body.motivo,
           ].join("\n"),
         },
+        { type: "separator", divider: true, spacing: 1 },
         {
           type: "fields",
           fields: [
-            { name: "Bloque evaluacion", value: body.policyCategory?.trim() || "-", inline: true },
+            { name: "Bloque evaluaci\u00f3n", value: body.policyCategory?.trim() || "-", inline: true },
             { name: "Falta", value: body.policyFault?.trim() || "-", inline: true },
-            { name: "Categorias", value: categorias, inline: true },
+            { name: "Categor\u00edas", value: categorias, inline: true },
           ],
         },
         {
@@ -327,11 +347,12 @@ export async function POST(request: Request) {
             body.pruebas?.trim() || "-",
           ].join("\n"),
         },
+        { type: "separator", divider: true, spacing: 1 },
         {
           type: "fields",
           fields: [
-            { name: "Sancion solicitada", value: `${baseSancion} (${sanctionLevelLabel(baseSancion)})`, inline: true },
-            { name: "Sancion final aplicada", value: `${finalSanction} (${finalLevel})`, inline: true },
+            { name: "Sanci\u00f3n solicitada", value: `${baseSancion} (${sanctionLevelLabel(baseSancion)})`, inline: true },
+            { name: "Sanci\u00f3n final aplicada", value: `**${finalSanction}** (${finalLevel})`, inline: true },
           ],
         },
         {
@@ -346,6 +367,7 @@ export async function POST(request: Request) {
           type: "text",
           content: `> ${resolution.note}`,
         },
+        { type: "separator", divider: true, spacing: 1 },
         {
           type: "text",
           content: [
@@ -460,7 +482,7 @@ export async function POST(request: Request) {
       webhookUrl,
       buildSanctionPayload({
         title: "Registro de sanción",
-        accentColor: "#FF6B84",
+        accentColor: sanctionAccentHex(finalSanction),
         footer: "Support Management | Registro interno",
         contentAbove: mentionsContent,
       })
@@ -471,7 +493,7 @@ export async function POST(request: Request) {
         historyWebhookUrl,
         buildSanctionPayload({
           title: "Historial | Registro de sanción",
-          accentColor: "#F59E0B",
+          accentColor: sanctionAccentHex(finalSanction),
           footer: "Support Management | Historial",
           contentAbove: mentionsContent
             ? `Historial actualizado: ${mentionsContent}`
