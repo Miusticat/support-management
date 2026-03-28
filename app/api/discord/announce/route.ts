@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { canAccessSanctionsByRole } from "@/lib/discord-staff-roles";
-import { sendDiscordComponentsV2Webhook, type ComponentsV2Input } from "@/lib/discord-webhook";
+import { sendDiscordComponentsV2Webhook, type ComponentsV2Input, type ComponentBlock } from "@/lib/discord-webhook";
 
 type AnnounceRequestBody = {
   title?: string;
   description?: string;
   accentColorHex?: string;
+  spoiler?: boolean;
   thumbnailUrl?: string;
   imageUrl?: string;
   footerText?: string;
+  blocks?: ComponentBlock[];
   fields?: Array<{
     name: string;
     value: string;
@@ -29,6 +31,8 @@ type AnnounceRequestBody = {
     buttonUrl?: string;
   }>;
   contentAbove?: string;
+  webhookUsername?: string;
+  webhookAvatarUrl?: string;
 };
 
 function isAuthorizedByKey(request: Request) {
@@ -103,15 +107,19 @@ export async function POST(request: Request) {
   try {
     const payload: ComponentsV2Input = {
       accentColorHex: body.accentColorHex,
+      spoiler: body.spoiler,
       title: body.title,
       description: body.description,
       thumbnailUrl: body.thumbnailUrl,
       imageUrl: body.imageUrl,
       footerText: body.footerText,
+      blocks: body.blocks,
       fields: body.fields,
       buttons: body.buttons,
       sections: body.sections,
       contentAbove: body.contentAbove,
+      webhookUsername: body.webhookUsername,
+      webhookAvatarUrl: body.webhookAvatarUrl,
     };
 
     await sendDiscordComponentsV2Webhook(webhookUrl, payload);

@@ -89,13 +89,23 @@ type ContainerComponent = {
   >;
 };
 
+export type ComponentBlock =
+  | { type: 'text'; content: string }
+  | { type: 'fields'; fields: Array<{ name: string; value: string; inline?: boolean }> }
+  | { type: 'section'; text: string; accessoryType: 'thumbnail' | 'button'; thumbnailUrl?: string; buttonLabel?: string; buttonUrl?: string; buttonEmoji?: string }
+  | { type: 'separator'; divider: boolean; spacing: 1 | 2 }
+  | { type: 'media-gallery'; items: Array<{ url: string; description?: string }> }
+  | { type: 'action-row'; buttons: Array<{ label: string; url: string; emoji?: string }> };
+
 export type ComponentsV2Input = {
   accentColorHex?: string;
+  spoiler?: boolean;
   title?: string;
   description?: string;
   thumbnailUrl?: string;
   imageUrl?: string;
   footerText?: string;
+  blocks?: ComponentBlock[];
   fields?: EmbedFieldInput[];
   buttons?: Array<{
     label: string;
@@ -110,6 +120,8 @@ export type ComponentsV2Input = {
     buttonUrl?: string;
   }>;
   contentAbove?: string;
+  webhookUsername?: string;
+  webhookAvatarUrl?: string;
   mentionUserIds?: string[];
 };
 
@@ -124,6 +136,74 @@ function hexToDecimalColor(hex: string) {
   return parseInt(normalized, 16);
 }
 
+type ContainerChild = ContainerComponent["components"][number];
+
+function buildBlockComponents(block: ComponentBlock): ContainerChild[] {
+  switch (block.type) {
+    case 'text':
+      if (!block.content.trim()) return [];
+      return [{ type: 10, content: block.content }];
+
+    case 'fields': {
+      const fieldsText = block.fields
+        .filter((f) => f.name.trim() && f.value.trim())
+        .map((f) => `**${f.name}**\n${f.value}`)
+        .join("\n\n");
+      if (!fieldsText) return [];
+      return [{ type: 10, content: fieldsText }];
+    }
+
+    case 'section': {
+      if (!block.text.trim()) return [];
+      const accessory: SectionComponent["accessory"] =
+        block.accessoryType === 'thumbnail' && block.thumbnailUrl
+          ? { type: 11, media: { url: block.thumbnailUrl } }
+          : block.accessoryType === 'button' && block.buttonUrl
+            ? {
+                type: 2, style: 5 as const,
+                label: block.buttonLabel || "Abrir",
+                url: block.buttonUrl,
+                emoji: block.buttonEmoji ? { name: block.buttonEmoji } : undefined,
+              }
+            : { type: 2, style: 2 as const, label: block.buttonLabel || "Info", custom_id: "_noop", disabled: true };
+      return [{ type: 9, components: [{ type: 10, content: block.text }], accessory } as SectionComponent];
+    }
+
+    case 'separator':
+      return [{ type: 14, divider: block.divider, spacing: block.spacing }];
+
+    case 'media-gallery': {
+      const items = block.items.filter((i) => i.url.trim());
+      if (items.length === 0) return [];
+      return [{
+        type: 12,
+        items: items.map((i) => ({
+          media: { url: i.url },
+          description: i.description || undefined,
+        })),
+      }];
+    }
+
+    case 'action-row': {
+      const buttons = block.buttons.filter((b) => b.label.trim() && b.url.trim()).slice(0, 5);
+      if (buttons.length === 0) return [];
+      return [{
+        type: 1,
+        components: buttons.map((btn) => ({
+          type: 2 as const,
+          style: 5 as const,
+          label: btn.label,
+          url: btn.url,
+          emoji: btn.emoji ? { name: btn.emoji } : undefined,
+        })),
+      }];
+    }
+
+    default:
+      return [];
+  }
+}
+
 function buildComponentsV2(payload: ComponentsV2Input): DiscordComponent[] {
   const components: DiscordComponent[] = [];
 
@@ -133,7 +213,10 @@ function buildComponentsV2(payload: ComponentsV2Input): DiscordComponent[] {
 
   const containerChildren: ContainerComponent["components"] = [];
 
+  // Header
+  let hasHeader = false;
   if (payload.title) {
+    hasHeader = true;
     const titleMd = `## ${payload.title}`;
     if (payload.thumbnailUrl) {
       containerChildren.push({
@@ -147,86 +230,75 @@ function buildComponentsV2(payload: ComponentsV2Input): DiscordComponent[] {
   }
 
   if (payload.description) {
+    hasHeader = true;
     containerChildren.push({ type: 10, content: payload.description });
   }
 
-  if (payload.fields && payload.fields.length > 0) {
-    containerChildren.push({ type: 14, divider: true, spacing: 1 });
+  // Resolve blocks: use explicit blocks or convert legacy fields
+  let blocks: ComponentBlock[] = [];
 
-    const fieldsText = payload.fields
-      .filter((f) => f.name.trim() && f.value.trim())
-      .map((f) => `**${f.name}**\n${f.value}`)
-      .join("\n\n");
-
-    if (fieldsText) {
-      containerChildren.push({ type: 10, content: fieldsText });
+  if (payload.blocks && payload.blocks.length > 0) {
+    blocks = payload.blocks;
+  } else {
+    if (payload.fields && payload.fields.length > 0) {
+      blocks.push({ type: 'fields', fields: payload.fields });
     }
-  }
-
-  if (payload.sections && payload.sections.length > 0) {
-    for (const section of payload.sections) {
-      if (!section.text.trim()) continue;
-
-      containerChildren.push({ type: 14, divider: true, spacing: 1 });
-
-      const sectionComponent: SectionComponent = {
-        type: 9,
-        components: [{ type: 10, content: section.text }],
-        accessory: section.thumbnailUrl
-          ? { type: 11, media: { url: section.thumbnailUrl } }
-          : section.buttonUrl
-            ? { type: 2, style: 5 as const, label: section.buttonLabel || "Abrir", url: section.buttonUrl }
-            : { type: 2, style: 2 as const, label: section.buttonLabel || "Info", custom_id: "_noop", disabled: true },
-      };
-      containerChildren.push(sectionComponent);
+    if (payload.sections && payload.sections.length > 0) {
+      for (const section of payload.sections) {
+        if (!section.text.trim()) continue;
+        blocks.push({
+          type: 'section',
+          text: section.text,
+          accessoryType: section.thumbnailUrl ? 'thumbnail' : 'button',
+          thumbnailUrl: section.thumbnailUrl,
+          buttonLabel: section.buttonLabel,
+          buttonUrl: section.buttonUrl,
+        });
+      }
     }
-  }
-
-  if (payload.imageUrl) {
-    containerChildren.push({ type: 14, divider: false, spacing: 1 });
-    containerChildren.push({
-      type: 12,
-      items: [{ media: { url: payload.imageUrl } }],
-    });
-  }
-
-  if (payload.buttons && payload.buttons.length > 0) {
-    containerChildren.push({ type: 14, divider: true, spacing: 1 });
-    const buttonComponents: ButtonComponent[] = payload.buttons
-      .slice(0, 5)
-      .map((btn) => {
-        if (btn.url) {
-          return {
-            type: 2 as const,
-            style: 5 as const,
-            label: btn.label,
-            url: btn.url,
-            emoji: btn.emoji ? { name: btn.emoji } : undefined,
-          };
-        }
-        return {
-          type: 2 as const,
-          style: (btn.style || 2) as ButtonComponent["style"],
-          label: btn.label,
-          custom_id: `btn_${btn.label.toLowerCase().replace(/\s+/g, "_")}`,
-          emoji: btn.emoji ? { name: btn.emoji } : undefined,
-        };
+    if (payload.imageUrl) {
+      blocks.push({ type: 'media-gallery', items: [{ url: payload.imageUrl }] });
+    }
+    if (payload.buttons && payload.buttons.length > 0) {
+      blocks.push({
+        type: 'action-row',
+        buttons: payload.buttons
+          .filter((b) => b.label && b.url)
+          .map((b) => ({ label: b.label, url: b.url!, emoji: b.emoji })),
       });
-    containerChildren.push({ type: 1, components: buttonComponents });
+    }
   }
 
+  // Render blocks with auto-separators
+  if (blocks.length > 0) {
+    if (hasHeader && blocks[0].type !== 'separator') {
+      containerChildren.push({ type: 14, divider: true, spacing: 1 });
+    }
+
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      const prev = i > 0 ? blocks[i - 1] : null;
+      if (i > 0 && block.type !== 'separator' && prev?.type !== 'separator') {
+        containerChildren.push({ type: 14, divider: true, spacing: 1 });
+      }
+      containerChildren.push(...buildBlockComponents(block));
+    }
+  }
+
+  // Footer
   if (payload.footerText) {
-    containerChildren.push({ type: 14, divider: true, spacing: 1 });
-    containerChildren.push({
-      type: 10,
-      content: `-# ${payload.footerText}`,
-    });
+    const lastBlock = blocks.length > 0 ? blocks[blocks.length - 1] : null;
+    if (containerChildren.length > 0 && (!lastBlock || lastBlock.type !== 'separator')) {
+      containerChildren.push({ type: 14, divider: true, spacing: 1 });
+    }
+    containerChildren.push({ type: 10, content: `-# ${payload.footerText}` });
   }
 
   if (containerChildren.length > 0) {
     components.push({
       type: 17,
       accent_color: hexToDecimalColor(payload.accentColorHex ?? "#ffac00"),
+      spoiler: payload.spoiler || undefined,
       components: containerChildren,
     });
   }
@@ -245,6 +317,8 @@ export async function sendDiscordComponentsV2Webhook(
   const body: Record<string, unknown> = {
     flags: IS_COMPONENTS_V2,
     components,
+    ...(payload.webhookUsername ? { username: payload.webhookUsername } : {}),
+    ...(payload.webhookAvatarUrl ? { avatar_url: payload.webhookAvatarUrl } : {}),
   };
 
   if (payload.mentionUserIds && payload.mentionUserIds.length > 0) {
