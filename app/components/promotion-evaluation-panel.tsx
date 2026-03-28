@@ -338,19 +338,19 @@ export function PromotionEvaluationPanel() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar support"
-              className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none transition-colors focus:border-[#ffac00]/50"
+              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_0_3px_rgba(255,172,0,0.08)]"
             />
           </label>
         </div>
 
         {message ? (
-          <p className="relative z-10 mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-[var(--color-neutral-grey)]">
+          <p className="relative z-10 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs text-[var(--color-neutral-grey)]">
             {message}
           </p>
         ) : null}
 
         {loading ? (
-          <p className="relative z-10 mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-[var(--color-neutral-grey)]">
+          <p className="relative z-10 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-sm text-[var(--color-neutral-grey)]">
             Cargando evaluaciones...
           </p>
         ) : null}
@@ -363,7 +363,7 @@ export function PromotionEvaluationPanel() {
 
         {!loading && !error ? (
           <div className="relative z-10 mt-5 grid gap-4 grid-cols-[280px_1fr]">
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="max-h-[40rem] space-y-2 overflow-y-auto pr-1">
                 {filteredSupports.map((support) => {
                   const isSelected = selectedSupportId === support.id;
@@ -379,7 +379,7 @@ export function PromotionEvaluationPanel() {
                       className={`w-full rounded-lg border px-3 py-2.5 text-left text-xs transition ${
                         isSelected
                           ? "border-[#ffac00]/50 bg-[#ffac00]/15"
-                          : "border-white/10 bg-transparent hover:border-white/20 hover:bg-white/[0.03]"
+                          : "border-white/[0.08] bg-transparent hover:border-white/15 hover:bg-white/[0.03]"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -420,7 +420,7 @@ export function PromotionEvaluationPanel() {
                 ) : null}
               </div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               {!selectedSupport ? (
                 <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-8 text-center">
                   <CircleDot className="mx-auto h-6 w-6 text-[var(--color-neutral-grey)]" />
@@ -443,7 +443,7 @@ export function PromotionEvaluationPanel() {
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                    <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]">Evaluaciones</p>
                         <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
@@ -460,12 +460,12 @@ export function PromotionEvaluationPanel() {
                   </div>
 
                   {activePanel === "sanctions" ? (
-                    <div className="mt-4 max-h-48 space-y-2 overflow-auto rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                    <div className="mt-4 max-h-48 space-y-2 overflow-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
                       {selectedSupport.sanctionsSummary.hasSanctions ? (
                         <table className="w-full text-[10px]">
                           <tbody>
                             {selectedSupport.sanctionsSummary.latest.map((item, index) => (
-                              <tr key={index} className="border-b border-white/10 text-[var(--color-neutral-grey)] last:border-0">
+                              <tr key={index} className="border-b border-white/[0.06] text-[var(--color-neutral-grey)] last:border-0">
                                 <td className="py-2">{item.fecha || "-"}</td>
                                 <td className="py-2 text-[var(--color-neutral-white)]">{item.appliedSanction}</td>
                               </tr>
@@ -498,7 +498,7 @@ export function PromotionEvaluationPanel() {
                         </div>
                       ) : (
                         <>
-                          <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+                          <div className="space-y-3 rounded-lg border border-white/[0.06] bg-white/[0.03] p-4">
                             <div className="flex items-center justify-between gap-2">
                               <label className="text-xs font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">
                                 Mi evaluación
@@ -532,7 +532,7 @@ export function PromotionEvaluationPanel() {
                                     [selectedSupport.id]: clampScore(Number(e.target.value)),
                                   }))
                                 }
-                                className="w-18 rounded-md border border-white/15 bg-[#1a1a1a] px-2 py-1 text-center text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50"
+                                className="w-18 rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-center text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                               />
                             </div>
 
@@ -580,7 +580,7 @@ export function PromotionEvaluationPanel() {
                                 }))
                               }
                               placeholder="Ingresa tu evaluación, contexto, o razón de tu puntaje..."
-                              className="min-h-20 w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-xs text-[var(--color-neutral-white)] placeholder-[var(--color-neutral-grey)]/60 outline-none transition focus:border-[#ffac00]/50 focus:bg-[#1a1a1a]"
+                              className="min-h-20 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2.5 text-xs text-[var(--color-neutral-white)] placeholder-[var(--color-neutral-grey)]/60 outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_0_3px_rgba(255,172,0,0.08)]"
                             />
                           </div>
 
@@ -597,7 +597,7 @@ export function PromotionEvaluationPanel() {
                             <button
                               type="button"
                               onClick={() => setActivePanel("sanctions")}
-                              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-neutral-grey)] transition hover:border-white/20 hover:bg-white/10 hover:text-[var(--color-neutral-white)]"
+                              className="w-full rounded-lg border border-white/[0.08] bg-white/5 px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-[var(--color-neutral-grey)] transition hover:border-white/20 hover:bg-white/10 hover:text-[var(--color-neutral-white)]"
                             >
                               Ver historial de sanciones • {selectedSupport.sanctionsSummary.total}
                             </button>

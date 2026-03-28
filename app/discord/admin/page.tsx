@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { Sidebar } from "@/app/components/sidebar";
-import { TopNavbar } from "@/app/components/top-navbar";
+import { PageHeader } from "@/app/components/page-header";
+import { PageShell } from "@/app/components/page-shell";
 import { AdminPanel } from "@/app/components/admin-panel";
 import { authOptions } from "@/lib/auth";
 import { canAccessAdminPanel } from "@/lib/discord-staff-roles";
@@ -69,24 +69,14 @@ export default async function AdminPage() {
     : [];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0d0d0d] text-[var(--color-neutral-white)]">
+    <PageShell>
+      <PageHeader
+        tag="Panel de control"
+        title="Panel de administración"
+        description="Gestiona sanciones: retira, actualiza o modifica registros de sanciones del equipo de soporte."
+      />
 
-      <Sidebar />
-      <TopNavbar />
-
-      <main className="relative z-10 px-4 pb-24 pt-24 sm:px-8 lg:pl-[19.5rem] lg:pr-8">
-        <section className="mb-6">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Panel de control</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-neutral-white)] sm:text-3xl">
-            Panel de administración
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--color-neutral-grey)]">
-            Gestiona sanciones: retira, actualiza o modifica registros de sanciones del equipo de soporte.
-          </p>
-        </section>
-
-        <AdminPanel sanctions={sanctions} />
-      </main>
-    </div>
+      <AdminPanel sanctions={sanctions} />
+    </PageShell>
   );
 }

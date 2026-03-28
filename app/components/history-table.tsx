@@ -21,7 +21,7 @@ const statusClassMap: Record<HistoryItem["status"], string> = {
 export function HistoryTable({ data }: HistoryTableProps) {
   return (
     <UICard className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">History</p>
           <h3 className="mt-1 text-lg font-medium text-[var(--color-neutral-white)]">Recent Sessions</h3>

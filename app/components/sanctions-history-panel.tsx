@@ -103,23 +103,23 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Total sanciones</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--color-neutral-white)]">{sanctions.length}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Total sanciones</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-neutral-white)]">{sanctions.length}</p>
         </UICard>
 
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Supports sancionados</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--color-neutral-white)]">{supportsRanking.length}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Supports sancionados</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-neutral-white)]">{supportsRanking.length}</p>
         </UICard>
 
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Reincidentes</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--color-accent-orange)]">{reincidentes.length}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Reincidentes</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-accent-orange)]">{reincidentes.length}</p>
         </UICard>
 
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">En vista filtrada</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--color-accent-blue)]">{filtered.length}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">En vista filtrada</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-accent-blue)]">{filtered.length}</p>
         </UICard>
       </div>
 
@@ -134,14 +134,14 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar por support, admin o ID"
-                  className="w-full rounded-xl border border-white/10 bg-[#1a1a1a] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50 sm:w-72"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)] sm:w-72"
                 />
               </label>
 
               <select
                 value={sanctionFilter}
                 onChange={(e) => setSanctionFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50"
+                className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                 style={{ colorScheme: "dark" }}
               >
                 <option value="all">Todas las sanciones</option>
@@ -154,21 +154,21 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
             </div>
           </div>
 
-          <div className="mt-4 max-h-[32rem] overflow-auto rounded-xl border border-white/10">
+          <div className="mt-4 max-h-[32rem] overflow-auto rounded-xl border border-white/[0.06]">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="sticky top-0 bg-[#1a1a1a] text-[var(--color-neutral-grey)]">
+              <thead className="sticky top-0 border-b border-white/[0.06] bg-[#141414] text-[var(--color-neutral-grey)]">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Fecha</th>
-                  <th className="px-3 py-2 font-medium">Support</th>
-                  <th className="px-3 py-2 font-medium">Admin</th>
-                  <th className="px-3 py-2 font-medium">Solicitada</th>
-                  <th className="px-3 py-2 font-medium">Final</th>
-                  <th className="px-3 py-2 font-medium">Nota de acumulacion</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Fecha</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Support</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Admin</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Solicitada</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Final</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Nota de acumulación</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((row) => (
-                  <tr key={row.id} className="border-t border-white/10">
+                  <tr key={row.id} className="border-t border-white/[0.04] transition-colors hover:bg-white/[0.02]">
                     <td className="px-3 py-2 text-[var(--color-neutral-grey)]">{asDate(row.createdAt)}</td>
                     <td className="px-3 py-2 text-[var(--color-neutral-white)]">{row.supportName}</td>
                     <td className="px-3 py-2 text-[var(--color-neutral-grey)]">{row.adminName}</td>
@@ -179,8 +179,9 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
                 ))}
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-[var(--color-neutral-grey)]">
-                      No hay sanciones para el filtro actual.
+                    <td colSpan={6} className="px-3 py-12 text-center">
+                      <Search className="mx-auto mb-3 h-8 w-8 text-[var(--color-neutral-grey)]/30" />
+                      <p className="text-sm text-[var(--color-neutral-grey)]">No hay sanciones para el filtro actual.</p>
                     </td>
                   </tr>
                 ) : null}
@@ -199,7 +200,7 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
             {supportsRanking.slice(0, 10).map((item, index) => (
               <div
                 key={item.supportDiscordId}
-                className="rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2"
+                className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 transition-colors hover:border-white/[0.1] hover:bg-white/[0.03]"
               >
                 <p className="text-sm font-medium text-[var(--color-neutral-white)]">
                   #{index + 1} {item.supportName}

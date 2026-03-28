@@ -18,13 +18,13 @@ export function ChartCard({
 }: ChartCardProps) {
   return (
     <UICard className={`p-6 ${className}`}>
-      <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-medium text-[var(--color-neutral-white)]">{title}</h3>
-          <p className="mt-1 text-sm text-[var(--color-neutral-grey)]">{subtitle}</p>
+          <h3 className="text-base font-semibold text-[var(--color-neutral-white)]">{title}</h3>
+          <p className="mt-1 text-[13px] text-[var(--color-neutral-grey)]">{subtitle}</p>
         </div>
         {badge ? (
-          <span className="rounded-lg border border-[#ffac00]/35 bg-[#ffac00]/15 px-2 py-1 text-xs uppercase tracking-wide text-[#ffac00]">
+          <span className="rounded-lg border border-[#ffac00]/25 bg-[#ffac00]/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-[#ffac00]">
             {badge}
           </span>
         ) : null}

@@ -142,54 +142,56 @@ export function TeamSupportPanel() {
     <UICard className="p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Team Support</p>
-          <h2 className="mt-1 text-2xl font-semibold text-[var(--color-neutral-white)]">Estructura del Equipo</h2>
-          <p className="mt-2 text-sm text-[var(--color-neutral-grey)]">
+          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--color-neutral-grey)]/60">Team Support</p>
+          <h2 className="mt-1.5 text-xl font-semibold text-[var(--color-neutral-white)]">Estructura del Equipo</h2>
+          <p className="mt-1.5 text-[13px] text-[var(--color-neutral-grey)]">
             Miembros con rango desde Support Lead hasta Support, actualizados desde Discord.
           </p>
         </div>
-        <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-[var(--color-neutral-grey)]">
+        <div className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-[var(--color-neutral-grey)]">
           Total: {members.length}
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-[#f59e0b]/25 bg-[#f59e0b]/10 p-3">
-          <p className="text-xs uppercase tracking-wide text-[#ffd79a]">Support Lead</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--color-neutral-white)]">{grouped.leads.length}</p>
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-[#f59e0b]/20 bg-[#f59e0b]/[0.07] p-3.5">
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#ffd79a]/80">Support Lead</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--color-neutral-white)]">{grouped.leads.length}</p>
         </div>
-        <div className="rounded-xl border border-[#60a5fa]/25 bg-[#60a5fa]/10 p-3">
-          <p className="text-xs uppercase tracking-wide text-[#b9d8ff]">Support Trainer</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--color-neutral-white)]">{grouped.trainers.length}</p>
+        <div className="rounded-xl border border-[#60a5fa]/20 bg-[#60a5fa]/[0.07] p-3.5">
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#b9d8ff]/80">Support Trainer</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--color-neutral-white)]">{grouped.trainers.length}</p>
         </div>
-        <div className="rounded-xl border border-[#34d399]/25 bg-[#34d399]/10 p-3">
-          <p className="text-xs uppercase tracking-wide text-[#b9f5df]">Support</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--color-neutral-white)]">{grouped.supports.length}</p>
+        <div className="rounded-xl border border-[#34d399]/20 bg-[#34d399]/[0.07] p-3.5">
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[#b9f5df]/80">Support</p>
+          <p className="mt-1 text-2xl font-bold text-[var(--color-neutral-white)]">{grouped.supports.length}</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-[var(--color-neutral-grey)]">
+        <div className="mt-5 flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-sm text-[var(--color-neutral-grey)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#ffac00]/30 border-t-[#ffac00]" />
           Cargando miembros del equipo...
         </div>
       ) : null}
 
       {error ? (
-        <div className="mt-5 rounded-xl border border-[var(--color-accent-red)]/40 bg-[var(--color-accent-red)]/10 p-4 text-sm text-[var(--color-accent-red)]">
+        <div className="mt-5 rounded-xl border border-[var(--color-accent-red)]/30 bg-[var(--color-accent-red)]/[0.07] p-4 text-sm text-[var(--color-accent-red)]">
           {error}
         </div>
       ) : null}
 
       {!loading && !error && members.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-[var(--color-neutral-grey)]">
-          No hay miembros con rango Support Lead, Support Trainer o Support.
+        <div className="mt-5 flex flex-col items-center rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
+          <UsersRound className="mb-3 h-8 w-8 text-[var(--color-neutral-grey)]/40" />
+          <p className="text-sm text-[var(--color-neutral-grey)]">No hay miembros con rango Support Lead, Support Trainer o Support.</p>
         </div>
       ) : null}
 
       {!loading && !error && members.length > 0 ? (
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-2.5 md:grid-cols-2">
           {members.map((member) => (
-            <div key={member.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div key={member.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors duration-150 hover:border-white/[0.1] hover:bg-white/[0.03]">
               <div className="flex items-center gap-3">
                 <div className="grid h-10 w-10 place-items-center rounded-full bg-[#5865f2]/25 text-sm font-semibold text-[#dbe3ff]">
                   {initials(member.displayName)}

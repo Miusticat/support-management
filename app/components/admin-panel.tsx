@@ -166,7 +166,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
             placeholder="Buscar por nombre, Discord ID o admin..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-[var(--color-neutral-white)] outline-none placeholder:text-[var(--color-neutral-grey)] focus:border-[#ffac00]/50"
+            className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] py-2 pl-10 pr-4 text-sm text-[var(--color-neutral-white)] outline-none placeholder:text-[var(--color-neutral-grey)]/50 transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
           />
         </div>
 
@@ -175,8 +175,8 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
             onClick={() => setSanctionFilter("all")}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
               sanctionFilter === "all"
-                ? "bg-[#ffac00]/30 text-[#ffac00]"
-                : "bg-white/5 text-[var(--color-neutral-grey)] hover:bg-white/10"
+                ? "bg-[#ffac00]/15 text-[#ffac00] border border-[#ffac00]/25"
+                : "border border-white/[0.06] bg-white/[0.03] text-[var(--color-neutral-grey)] hover:bg-white/[0.05]"
             }`}
           >
             Todas ({sanctions.length})
@@ -189,8 +189,8 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                 onClick={() => setSanctionFilter(kind)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                   sanctionFilter === kind
-                    ? "bg-[#ffac00]/30 text-[#ffac00]"
-                    : "bg-white/5 text-[var(--color-neutral-grey)] hover:bg-white/10"
+                    ? "bg-[#ffac00]/15 text-[#ffac00] border border-[#ffac00]/25"
+                    : "border border-white/[0.06] bg-white/[0.03] text-[var(--color-neutral-grey)] hover:bg-white/[0.05]"
                 }`}
               >
                 {kind} ({count})
@@ -203,7 +203,8 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
       {/* Sanctions List */}
       <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="rounded-lg border border-white/10 bg-white/5 p-8 text-center">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
+            <Search className="mx-auto mb-3 h-8 w-8 text-[var(--color-neutral-grey)]/30" />
             <p className="text-sm text-[var(--color-neutral-grey)]">
               No se encontraron sanciones que coincidan con tu búsqueda.
             </p>
@@ -217,7 +218,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
             return (
               <div
                 key={sanction.id}
-                className="rounded-lg border border-white/10 bg-white/5 p-4 transition-all hover:bg-white/[0.07]"
+                className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 transition-all hover:border-white/[0.1] hover:bg-white/[0.03]"
               >
                 {/* Header - Title Row */}
                 <div className="flex items-center justify-between gap-3">
@@ -298,7 +299,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                           type="text"
                           value={editData.supportName || ""}
                           onChange={(e) => handleEditChange("supportName", e.target.value)}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-blue-500/50"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                         />
                       </div>
                       <div>
@@ -309,7 +310,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                           type="text"
                           value={editData.supportDiscordId || ""}
                           onChange={(e) => handleEditChange("supportDiscordId", e.target.value)}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-blue-500/50"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                         />
                       </div>
                       <div>
@@ -320,7 +321,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                           type="text"
                           value={editData.adminName || ""}
                           onChange={(e) => handleEditChange("adminName", e.target.value)}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-blue-500/50"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                         />
                       </div>
                       <div>
@@ -331,7 +332,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                           type="text"
                           value={editData.requestedSanction || ""}
                           onChange={(e) => handleEditChange("requestedSanction", e.target.value)}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-blue-500/50"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                         />
                       </div>
                       <div>
@@ -342,7 +343,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                           type="text"
                           value={editData.appliedSanction || ""}
                           onChange={(e) => handleEditChange("appliedSanction", e.target.value)}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-blue-500/50"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                         />
                       </div>
                       <div>
@@ -353,7 +354,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                           type="text"
                           value={editData.fecha || ""}
                           onChange={(e) => handleEditChange("fecha", e.target.value)}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-blue-500/50"
+                          className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                         />
                       </div>
                     </div>
@@ -364,7 +365,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                       <textarea
                         value={editData.accumulationNote || ""}
                         onChange={(e) => handleEditChange("accumulationNote", e.target.value)}
-                        className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-blue-500/50"
+                        className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
                         rows={2}
                       />
                     </div>

@@ -16,8 +16,8 @@
   --color-neutral-grey: #9ca3af;
   --color-surface: #141414;
   --color-surface-hover: #1a1a1a;
-  --surface-glass: #141414;
-  --surface-glass-strong: #141414;
+  --surface-glass: rgba(20, 20, 20, 0.7);
+  --surface-glass-strong: rgba(20, 20, 20, 0.85);
 }
 
 @theme inline {
@@ -26,6 +26,7 @@
   --font-sans: var(--font-inter);
 }
 
+/* ── Scrollbar ──────────────────────────────────────────────── */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 172, 0, 0.3) transparent;
@@ -45,6 +46,15 @@
   border-radius: 3px;
 }
 
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 172, 0, 0.5);
+}
+
+/* ── Base ────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -58,4 +68,104 @@ body {
 ::selection {
   background: rgba(255, 172, 0, 0.35);
   color: #ffffff;
+}
+
+/* ── Ambient background glow ─────────────────────────────── */
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 0% 0%, rgba(255, 172, 0, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 100% 100%, rgba(230, 126, 34, 0.04) 0%, transparent 70%);
+}
+
+/* ── Page entrance animation ─────────────────────────────── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s ease-out both;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.35s ease-out both;
+}
+
+/* Staggered children animation helper */
+.stagger-children > * {
+  animation: fadeInUp 0.4s ease-out both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 300ms; }
+
+/* ── Form elements ───────────────────────────────────────── */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(255, 172, 0, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 172, 0, 0.1), 0 0 20px rgba(255, 172, 0, 0.08);
+  outline: none;
+}
+
+/* ── Glass surface utility ───────────────────────────────── */
+.glass-surface {
+  background: var(--surface-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-surface-strong {
+  background: var(--surface-glass-strong);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }

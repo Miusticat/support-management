@@ -242,16 +242,16 @@ export function SupportsOverviewPanel() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Total Supports</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--color-neutral-white)]">{totals.all}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Total Supports</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-neutral-white)]">{totals.all}</p>
         </UICard>
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Historial limpio</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--color-accent-green)]">{totals.clean}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Historial limpio</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-accent-green)]">{totals.clean}</p>
         </UICard>
         <UICard className="p-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Riesgo alto/crítico</p>
-          <p className="mt-2 text-3xl font-semibold text-[var(--color-accent-red)]">{totals.risk}</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">Riesgo alto/crítico</p>
+          <p className="mt-2 text-3xl font-bold text-[var(--color-accent-red)]">{totals.risk}</p>
         </UICard>
       </div>
 
@@ -266,14 +266,14 @@ export function SupportsOverviewPanel() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar por nombre, @usuario o ID"
-                className="w-full rounded-xl border border-white/10 bg-[#1a1a1a] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50 sm:w-72"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)] sm:w-72"
               />
             </label>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50"
+              className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40"
               style={{ colorScheme: "dark" }}
             >
               <option value="all">Todos los estados</option>
@@ -297,37 +297,38 @@ export function SupportsOverviewPanel() {
         ) : null}
 
         {loading ? (
-          <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-[var(--color-neutral-grey)]">
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm text-[var(--color-neutral-grey)]">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#ffac00]/30 border-t-[#ffac00]" />
             Cargando lista de supports...
-          </p>
+          </div>
         ) : null}
 
         {error ? (
-          <p className="mt-4 rounded-xl border border-[var(--color-accent-red)]/40 bg-[var(--color-accent-red)]/12 px-4 py-3 text-sm text-[var(--color-accent-red)]">
+          <p className="mt-4 rounded-xl border border-[var(--color-accent-red)]/30 bg-[var(--color-accent-red)]/[0.07] px-4 py-3 text-sm text-[var(--color-accent-red)]">
             {error}
           </p>
         ) : null}
 
         {!loading && !error ? (
-          <div className="mt-4 overflow-auto rounded-xl border border-white/10">
+          <div className="mt-4 overflow-auto rounded-xl border border-white/[0.06]">
             <table className="w-full min-w-[960px] text-left text-sm">
-              <thead className="bg-[#1a1a1a] text-[var(--color-neutral-grey)]">
+              <thead className="border-b border-white/[0.06] bg-white/[0.02] text-[var(--color-neutral-grey)]">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Support</th>
-                  <th className="px-3 py-2 font-medium">Rango</th>
-                  <th className="px-3 py-2 font-medium">Estado administrativo</th>
-                  <th className="px-3 py-2 font-medium">Estado</th>
-                  <th className="px-3 py-2 font-medium">Total sanciones</th>
-                  <th className="px-3 py-2 font-medium">Advertencia</th>
-                  <th className="px-3 py-2 font-medium">Advertencia intermedia</th>
-                  <th className="px-3 py-2 font-medium">Advertencia grave</th>
-                  <th className="px-3 py-2 font-medium">Suspensión</th>
-                  <th className="px-3 py-2 font-medium">Remoción</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Support</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Rango</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Estado administrativo</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Estado</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Total sanciones</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Advertencia</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Advertencia intermedia</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Advertencia grave</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Suspensión</th>
+                  <th className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.1em]">Remoción</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSupports.map((item) => (
-                  <tr key={item.id} className="border-t border-white/10">
+                  <tr key={item.id} className="border-t border-white/[0.04] transition-colors hover:bg-white/[0.02]">
                     <td className="px-3 py-2">
                       <p className="font-medium text-[var(--color-neutral-white)]">{item.displayName}</p>
                       <p className="text-xs text-[var(--color-neutral-grey)]">
@@ -425,8 +426,9 @@ export function SupportsOverviewPanel() {
 
                 {filteredSupports.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-3 py-10 text-center text-[var(--color-neutral-grey)]">
-                      No hay supports para el filtro actual.
+                    <td colSpan={10} className="px-3 py-12 text-center">
+                      <UsersRound className="mx-auto mb-3 h-8 w-8 text-[var(--color-neutral-grey)]/30" />
+                      <p className="text-sm text-[var(--color-neutral-grey)]">No hay supports para el filtro actual.</p>
                     </td>
                   </tr>
                 ) : null}

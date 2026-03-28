@@ -151,7 +151,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
                 required
               />
             </label>
@@ -160,7 +160,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={colorHex}
                 onChange={(e) => setColorHex(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
                 placeholder="#ffac00"
               />
             </label>
@@ -171,7 +171,7 @@ export function DiscordAnnouncementStudio() {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-24 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+              className="min-h-24 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               required
             />
           </label>
@@ -182,7 +182,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
                 placeholder="@everyone"
               />
             </label>
@@ -191,7 +191,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
                 placeholder="https://..."
               />
             </label>
@@ -203,7 +203,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               />
             </label>
             <label className="space-y-2">
@@ -211,7 +211,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={authorIconUrl}
                 onChange={(e) => setAuthorIconUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               />
             </label>
           </div>
@@ -222,7 +222,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={thumbnailUrl}
                 onChange={(e) => setThumbnailUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               />
             </label>
             <label className="space-y-2">
@@ -230,7 +230,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               />
             </label>
           </div>
@@ -241,7 +241,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={footerText}
                 onChange={(e) => setFooterText(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               />
             </label>
             <label className="space-y-2">
@@ -249,7 +249,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={footerIconUrl}
                 onChange={(e) => setFooterIconUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               />
             </label>
           </div>
@@ -259,12 +259,12 @@ export function DiscordAnnouncementStudio() {
             <input
               value={announceKey}
               onChange={(e) => setAnnounceKey(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+              className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_16px_rgba(255,172,0,0.06)]"
               placeholder="x-announce-key"
             />
           </label>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-medium text-[var(--color-neutral-white)]">Campos del embed</p>
               <button
@@ -278,20 +278,20 @@ export function DiscordAnnouncementStudio() {
 
             <div className="space-y-3">
               {fields.map((field) => (
-                <div key={field.id} className="grid grid-cols-1 gap-2 rounded-lg border border-white/10 p-3 sm:grid-cols-12">
+                <div key={field.id} className="grid grid-cols-1 gap-2 rounded-lg border border-white/[0.06] p-3 sm:grid-cols-12">
                   <input
                     value={field.name}
                     onChange={(e) => updateField(field.id, { name: e.target.value })}
-                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50 sm:col-span-4"
+                    className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 sm:col-span-4"
                     placeholder="Nombre"
                   />
                   <input
                     value={field.value}
                     onChange={(e) => updateField(field.id, { value: e.target.value })}
-                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50 sm:col-span-5"
+                    className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40 sm:col-span-5"
                     placeholder="Valor"
                   />
-                  <label className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-xs text-[var(--color-neutral-grey)] sm:col-span-2">
+                  <label className="flex items-center justify-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-xs text-[var(--color-neutral-grey)] sm:col-span-2">
                     <input
                       type="checkbox"
                       checked={field.inline}
@@ -331,7 +331,7 @@ export function DiscordAnnouncementStudio() {
 
       <UICard className="xl:col-span-5 p-6">
         <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Preview</p>
-        <div className="mt-3 rounded-xl border border-white/10 bg-[#2b2d31] p-4">
+        <div className="mt-3 rounded-xl border border-white/[0.06] bg-[#2b2d31] p-4">
           {content ? <p className="mb-3 text-sm text-[#dbdee1]">{content}</p> : null}
           <div className="rounded-md border-l-4 p-4" style={{ borderLeftColor: colorHex || "#ffac00", background: "#1f2124" }}>
             {authorName ? (

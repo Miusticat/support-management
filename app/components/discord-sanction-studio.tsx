@@ -118,7 +118,7 @@ const policyInfractions: Record<string, PolicyInfraction[]> = {
 
 const sanctionOptions = ["Advertencia", "Warn Intermedio", "Warn Grave", "Suspension", "Remocion"];
 const selectClassName =
-  "w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50";
+  "w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40";
 const optionClassName = "bg-[#1a1a1a] text-[var(--color-neutral-white)]";
 
 function todayAsSanctionDate() {
@@ -781,14 +781,14 @@ export function DiscordSanctionStudio() {
           </div>
         </div>
 
-        <div className="mb-4 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <div className="mb-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
           <p className="text-xs text-[var(--color-neutral-grey)]">
             Formato optimizado para registrar sanciones de forma clara y consistente.
           </p>
         </div>
 
         <form onSubmit={publishSanction} className="space-y-4">
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">1. Fecha</p>
             <label className="space-y-2">
               <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Fecha (DD/MM/AA)</span>
@@ -796,7 +796,7 @@ export function DiscordSanctionStudio() {
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
                 required
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
               />
               {!dateIsValid ? (
                 <p className="text-xs text-[var(--color-accent-red)]">Formato esperado: DD/MM/AA</p>
@@ -804,7 +804,7 @@ export function DiscordSanctionStudio() {
             </label>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">2. Datos del Admin que sanciona</p>
             <label className="space-y-2">
               <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Admin que sanciona (sesion activa)</span>
@@ -812,13 +812,13 @@ export function DiscordSanctionStudio() {
                 value={adminSanciona}
                 readOnly
                 required
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
               />
               <p className="text-xs text-[var(--color-neutral-grey)]">Se completa automaticamente con tu login actual.</p>
             </label>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">3. Datos del Support Sancionado</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="space-y-2">
@@ -862,7 +862,7 @@ export function DiscordSanctionStudio() {
                 <input
                   value={supportPcuLink}
                   onChange={(e) => setSupportPcuLink(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
                   placeholder="https://pcu-es.gta.world/view/user/xxxx"
                 />
                 {supportPcuLink.trim() && !pcuLinkIsValid ? (
@@ -911,7 +911,7 @@ export function DiscordSanctionStudio() {
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               required
-              className="min-h-24 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+              className="min-h-24 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
               placeholder="Describe el hecho con redaccion formal: contexto, falta detectada, evaluacion y medida aplicada."
             />
             <p className="text-xs text-[var(--color-neutral-grey)]">
@@ -932,7 +932,7 @@ export function DiscordSanctionStudio() {
                     className={`rounded-lg border px-3 py-1.5 text-xs transition-all duration-200 ${
                       active
                         ? "border-[var(--color-accent-red)]/45 bg-[var(--color-accent-red)]/18 text-[var(--color-accent-red)]"
-                        : "border-white/10 bg-white/[0.03] text-[var(--color-neutral-grey)] hover:text-[var(--color-neutral-white)]"
+                        : "border-white/[0.08] bg-white/[0.03] text-[var(--color-neutral-grey)] hover:text-[var(--color-neutral-white)]"
                     }`}
                   >
                     {category}
@@ -948,7 +948,7 @@ export function DiscordSanctionStudio() {
               <textarea
                 value={pruebas}
                 onChange={(e) => setPruebas(e.target.value)}
-                className="min-h-20 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                className="min-h-20 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
                 placeholder="Links, clips, screenshots"
               />
             </label>
@@ -979,7 +979,7 @@ export function DiscordSanctionStudio() {
             </label>
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Acumulacion y antecedentes</p>
             {historyLoading ? (
               <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">Cargando antecedentes desde BD...</p>
@@ -992,7 +992,7 @@ export function DiscordSanctionStudio() {
                   min={0}
                   value={prevAdvertencias}
                   readOnly
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
                 />
               </label>
               <label className="space-y-1">
@@ -1002,7 +1002,7 @@ export function DiscordSanctionStudio() {
                   min={0}
                   value={prevWarnIntermedios}
                   readOnly
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
                 />
               </label>
               <label className="space-y-1">
@@ -1012,7 +1012,7 @@ export function DiscordSanctionStudio() {
                   min={0}
                   value={prevWarnGraves}
                   readOnly
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
                 />
               </label>
             </div>
@@ -1024,7 +1024,7 @@ export function DiscordSanctionStudio() {
             <textarea
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              className="min-h-20 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+              className="min-h-20 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
               placeholder="Contexto adicional, actitud, historial previo..."
             />
           </label>

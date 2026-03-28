@@ -1,10 +1,10 @@
 import { AlertTriangle, ShieldCheck, UsersRound, UserX } from "lucide-react";
 import { ChartsPanelShell } from "@/app/components/charts-panel-shell";
+import { PageHeader } from "@/app/components/page-header";
+import { PageShell } from "@/app/components/page-shell";
 import { prisma } from "@/lib/prisma";
-import { Sidebar } from "@/app/components/sidebar";
 import { StatCard } from "@/app/components/stat-card";
 import { TeamSupportPanel } from "@/app/components/team-support-panel";
-import { TopNavbar } from "@/app/components/top-navbar";
 
 export const dynamic = "force-dynamic";
 
@@ -226,44 +226,34 @@ export default async function Home() {
   const { stats, activityData, breakdownData, trendBadge } = await loadDashboardData();
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0d0d0d] text-[var(--color-neutral-white)]">
+    <PageShell>
+      <PageHeader
+        tag="Resumen"
+        title="Dashboard"
+        description="Métricas clave del sistema en un solo lugar con tendencias y estado operativo en tiempo real."
+      />
 
-      <Sidebar />
-      <TopNavbar />
+      <section className="stagger-children grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
+        ))}
+      </section>
 
-      <main className="relative z-10 px-4 pb-24 pt-24 sm:px-8 lg:pl-[19.5rem] lg:pr-8">
-        <section className="mb-6">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Resumen</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-neutral-white)] sm:text-3xl">
-            Dashboard
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--color-neutral-grey)]">
-            Metricas clave del sistema en un solo lugar con tendencias y estado operativo en tiempo real.
-          </p>
-        </section>
+      <section className="mt-8">
+        <ChartsPanelShell
+          activityData={activityData}
+          breakdownData={breakdownData}
+          activityTitle="Actividad de Sanciones"
+          activitySubtitle="Registros por mes durante los ultimos 12 meses"
+          activityBadge={trendBadge}
+          breakdownTitle="Distribucion por tipo"
+          breakdownSubtitle="Total de sanciones por categoria aplicada"
+        />
+      </section>
 
-        <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </section>
-
-        <section className="mt-6">
-          <ChartsPanelShell
-            activityData={activityData}
-            breakdownData={breakdownData}
-            activityTitle="Actividad de Sanciones"
-            activitySubtitle="Registros por mes durante los ultimos 12 meses"
-            activityBadge={trendBadge}
-            breakdownTitle="Distribucion por tipo"
-            breakdownSubtitle="Total de sanciones por categoria aplicada"
-          />
-        </section>
-
-        <section className="mt-6">
-          <TeamSupportPanel />
-        </section>
-      </main>
-    </div>
+      <section className="mt-8">
+        <TeamSupportPanel />
+      </section>
+    </PageShell>
   );
 }
