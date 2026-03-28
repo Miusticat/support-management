@@ -9,6 +9,7 @@ type DiscordGuildMember = {
     id?: string;
     username?: string;
     global_name?: string | null;
+    avatar?: string | null;
   };
   nick?: string | null;
 };
@@ -102,8 +103,12 @@ export async function GET() {
           member.user?.global_name?.trim() ||
           member.user?.username?.trim() ||
           id;
+        const avatarHash = member.user?.avatar ?? null;
+        const avatarUrl = id && avatarHash
+          ? `https://cdn.discordapp.com/avatars/${id}/${avatarHash}.png?size=128`
+          : null;
 
-        return { id, displayName };
+        return { id, displayName, avatarUrl };
       })
       .filter((member) => member.id.length > 0)
       .sort((a, b) => a.displayName.localeCompare(b.displayName, "es", { sensitivity: "base" }));

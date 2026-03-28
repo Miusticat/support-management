@@ -9,6 +9,7 @@ type DiscordGuildMember = {
     id?: string;
     username?: string;
     global_name?: string | null;
+    avatar?: string | null;
   };
   nick?: string | null;
 };
@@ -19,6 +20,7 @@ type SupportSummary = {
   id: string;
   displayName: string;
   username: string;
+  avatarUrl: string | null;
   role: TeamRole;
   roleLevel: number;
   sanctions: {
@@ -313,6 +315,10 @@ export async function GET() {
           member.user?.global_name?.trim() ||
           username ||
           id;
+        const avatarHash = member.user?.avatar ?? null;
+        const avatarUrl = id && avatarHash
+          ? `https://cdn.discordapp.com/avatars/${id}/${avatarHash}.png?size=128`
+          : null;
 
         const roleIds = Array.isArray(member.roles) ? member.roles : [];
         const roleInfo = getRoleFromIds(roleIds);
@@ -333,6 +339,7 @@ export async function GET() {
           id,
           displayName,
           username,
+          avatarUrl,
           role: roleInfo.role,
           roleLevel: roleInfo.roleLevel,
           sanctions,

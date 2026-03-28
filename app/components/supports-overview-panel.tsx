@@ -9,6 +9,7 @@ type SupportItem = {
   id: string;
   displayName: string;
   username: string;
+  avatarUrl: string | null;
   role: "Support Lead" | "Support Trainer" | "Support";
   roleLevel: number;
   sanctions: {
@@ -330,10 +331,22 @@ export function SupportsOverviewPanel() {
                 {filteredSupports.map((item) => (
                   <tr key={item.id} className="border-t border-white/[0.04] transition-colors hover:bg-white/[0.02]">
                     <td className="px-3 py-2">
-                      <p className="font-medium text-[var(--color-neutral-white)]">{item.displayName}</p>
-                      <p className="text-xs text-[var(--color-neutral-grey)]">
-                        {item.username ? `@${item.username}` : item.id}
-                      </p>
+                      <div className="flex items-center gap-2.5">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#5865f2]/25 text-xs font-semibold text-[#dbe3ff]">
+                          {item.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={item.avatarUrl} alt={item.displayName} className="h-full w-full object-cover" />
+                          ) : (
+                            item.displayName.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[var(--color-neutral-white)]">{item.displayName}</p>
+                          <p className="text-xs text-[var(--color-neutral-grey)]">
+                            {item.username ? `@${item.username}` : item.id}
+                          </p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-3 py-2">
                       <span className={`inline-flex rounded-md border px-2 py-1 text-xs font-medium ${roleBadgeClass[item.role]}`}>

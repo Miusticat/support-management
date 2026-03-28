@@ -12,6 +12,7 @@ type TeamMember = {
   username: string;
   role: TeamRole;
   roleLevel: number;
+  avatarUrl: string | null;
 };
 
 type TeamSupportResponse = {
@@ -193,8 +194,13 @@ export function TeamSupportPanel() {
           {members.map((member) => (
             <div key={member.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors duration-150 hover:border-white/[0.1] hover:bg-white/[0.03]">
               <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-full bg-[#5865f2]/25 text-sm font-semibold text-[#dbe3ff]">
-                  {initials(member.displayName)}
+                <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#5865f2]/25 text-sm font-semibold text-[#dbe3ff]">
+                  {member.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={member.avatarUrl} alt={member.displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    initials(member.displayName)
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-[var(--color-neutral-white)]">{member.displayName}</p>
