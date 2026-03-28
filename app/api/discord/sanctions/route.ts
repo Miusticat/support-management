@@ -256,7 +256,8 @@ export async function POST(request: Request) {
   }
 
   const counts = await getSupportCounts(body.supportDiscordId);
-  const resolution = resolveFinalSanction(body.sancion, counts);
+  const baseSancion = body.sancion;
+  const resolution = resolveFinalSanction(baseSancion, counts);
   const finalSanction = resolution.finalSanction;
   const finalLevel = sanctionLevelLabel(finalSanction);
 
@@ -329,7 +330,7 @@ export async function POST(request: Request) {
         {
           type: "fields",
           fields: [
-            { name: "Sancion solicitada", value: `${body.sancion} (${sanctionLevelLabel(body.sancion)})`, inline: true },
+            { name: "Sancion solicitada", value: `${baseSancion} (${sanctionLevelLabel(baseSancion)})`, inline: true },
             { name: "Sancion final aplicada", value: `${finalSanction} (${finalLevel})`, inline: true },
           ],
         },
@@ -399,7 +400,7 @@ export async function POST(request: Request) {
           motivo: body.motivo,
           categorias: body.categorias ?? [],
           pruebas: body.pruebas?.trim() || null,
-          requestedSanction: body.sancion,
+          requestedSanction: baseSancion,
           appliedSanction: finalSanction,
           levelLabel: finalLevel,
           previousAdvertencias: counts.advertencias,
@@ -443,7 +444,7 @@ export async function POST(request: Request) {
           ${body.motivo},
           ${body.categorias ?? []},
           ${body.pruebas?.trim() || null},
-          ${body.sancion},
+          ${baseSancion},
           ${finalSanction},
           ${finalLevel},
           ${counts.advertencias},
