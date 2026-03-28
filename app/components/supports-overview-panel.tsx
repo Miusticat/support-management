@@ -266,14 +266,14 @@ export function SupportsOverviewPanel() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar por nombre, @usuario o ID"
-                className="w-full rounded-xl border border-white/10 bg-[#0f1426] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-primary)]/60 sm:w-72"
+                className="w-full rounded-xl border border-white/10 bg-[#1a1a1a] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50 sm:w-72"
               />
             </label>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-white/10 bg-[#0f1426] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-primary)]/60"
+              className="rounded-xl border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50"
               style={{ colorScheme: "dark" }}
             >
               <option value="all">Todos los estados</option>
@@ -311,7 +311,7 @@ export function SupportsOverviewPanel() {
         {!loading && !error ? (
           <div className="mt-4 overflow-auto rounded-xl border border-white/10">
             <table className="w-full min-w-[960px] text-left text-sm">
-              <thead className="bg-[#11182f] text-[var(--color-neutral-grey)]">
+              <thead className="bg-[#1a1a1a] text-[var(--color-neutral-grey)]">
                 <tr>
                   <th className="px-3 py-2 font-medium">Support</th>
                   <th className="px-3 py-2 font-medium">Rango</th>
@@ -350,7 +350,7 @@ export function SupportsOverviewPanel() {
                                 [item.id]: e.target.value as SupportItem["manualStatus"]["value"],
                               }))
                             }
-                            className="rounded-lg border border-white/10 bg-[#0f1426] px-2.5 py-1.5 text-xs text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-primary)]/60"
+                            className="rounded-lg border border-white/10 bg-[#1a1a1a] px-2.5 py-1.5 text-xs text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50"
                             style={{ colorScheme: "dark" }}
                           >
                             <option value="Activo">Activo</option>

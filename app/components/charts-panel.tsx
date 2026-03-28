@@ -34,10 +34,10 @@ type ChartsPanelProps = {
 };
 
 const tooltipStyle = {
-  background: "rgba(8, 12, 32, 0.92)",
+  background: "rgba(13, 13, 13, 0.95)",
   border: "1px solid rgba(255,255,255,0.12)",
   borderRadius: "12px",
-  color: "#f0f0ee",
+  color: "#e5e7eb",
 };
 
 export function ChartsPanel({
@@ -62,8 +62,8 @@ export function ChartsPanel({
             <LineChart data={activityData}>
               <defs>
                 <linearGradient id="activityLine" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#38A5FF" />
-                  <stop offset="100%" stopColor="#8C73F8" />
+                  <stop offset="0%" stopColor="#ffac00" />
+                  <stop offset="100%" stopColor="#e67e22" />
                 </linearGradient>
               </defs>
               <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
@@ -75,8 +75,8 @@ export function ChartsPanel({
                 dataKey="value"
                 stroke="url(#activityLine)"
                 strokeWidth={3}
-                dot={{ stroke: "#A6DDFF", strokeWidth: 2, r: 4, fill: "#0b1021" }}
-                activeDot={{ r: 6, fill: "#8C73F8", stroke: "#0b1021", strokeWidth: 2 }}
+                dot={{ stroke: "#ffd580", strokeWidth: 2, r: 4, fill: "#0d0d0d" }}
+                activeDot={{ r: 6, fill: "#ffac00", stroke: "#0d0d0d", strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -93,8 +93,8 @@ export function ChartsPanel({
             <BarChart data={breakdownData}>
               <defs>
                 <linearGradient id="barFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#7CFFB5" stopOpacity={0.95} />
-                  <stop offset="95%" stopColor="#38A5FF" stopOpacity={0.55} />
+                  <stop offset="5%" stopColor="#ffac00" stopOpacity={0.95} />
+                  <stop offset="95%" stopColor="#e67e22" stopOpacity={0.55} />
                 </linearGradient>
               </defs>
               <CartesianGrid vertical={false} stroke="rgba(255,255,255,0.08)" />

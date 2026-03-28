@@ -166,7 +166,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
             placeholder="Buscar por nombre, Discord ID o admin..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-[var(--color-neutral-white)] outline-none placeholder:text-[var(--color-neutral-grey)] focus:border-[var(--color-primary)]/50"
+            className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-4 text-sm text-[var(--color-neutral-white)] outline-none placeholder:text-[var(--color-neutral-grey)] focus:border-[#ffac00]/50"
           />
         </div>
 
@@ -175,7 +175,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
             onClick={() => setSanctionFilter("all")}
             className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
               sanctionFilter === "all"
-                ? "bg-[var(--color-primary)]/40 text-[var(--color-neutral-white)]"
+                ? "bg-[#ffac00]/30 text-[#ffac00]"
                 : "bg-white/5 text-[var(--color-neutral-grey)] hover:bg-white/10"
             }`}
           >
@@ -189,7 +189,7 @@ export function AdminPanel({ sanctions }: AdminPanelProps) {
                 onClick={() => setSanctionFilter(kind)}
                 className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                   sanctionFilter === kind
-                    ? "bg-[var(--color-primary)]/40 text-[var(--color-neutral-white)]"
+                    ? "bg-[#ffac00]/30 text-[#ffac00]"
                     : "bg-white/5 text-[var(--color-neutral-grey)] hover:bg-white/10"
                 }`}
               >

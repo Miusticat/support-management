@@ -318,9 +318,7 @@ export function PromotionEvaluationPanel() {
 
   return (
     <UICard className="relative overflow-hidden p-5 sm:p-6">
-        <div className="pointer-events-none absolute -right-24 top-6 h-44 w-44 rounded-full bg-[var(--color-accent-blue)]/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 bottom-0 h-36 w-36 rounded-full bg-[var(--color-accent-green)]/10 blur-3xl" />
-
+        
         <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-[var(--color-neutral-white)] sm:text-xl">
@@ -340,7 +338,7 @@ export function PromotionEvaluationPanel() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar support"
-              className="w-full rounded-lg border border-white/10 bg-[#0f1426]/90 py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none transition-colors focus:border-[var(--color-primary)]/60"
+              className="w-full rounded-lg border border-white/10 bg-[#1a1a1a] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none transition-colors focus:border-[#ffac00]/50"
             />
           </label>
         </div>
@@ -380,7 +378,7 @@ export function PromotionEvaluationPanel() {
                       }}
                       className={`w-full rounded-lg border px-3 py-2.5 text-left text-xs transition ${
                         isSelected
-                          ? "border-[var(--color-accent-blue)]/50 bg-[var(--color-accent-blue)]/15"
+                          ? "border-[#ffac00]/50 bg-[#ffac00]/15"
                           : "border-white/10 bg-transparent hover:border-white/20 hover:bg-white/[0.03]"
                       }`}
                     >
@@ -401,7 +399,7 @@ export function PromotionEvaluationPanel() {
 
                       <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
                         <div
-                          className="h-full bg-linear-to-r from-[var(--color-accent-blue)]/70 to-[var(--color-primary)]/70"
+                          className="h-full bg-linear-to-r from-[#ffac00]/70 to-[#e67e22]/70"
                           style={{
                             width: `${
                               support.requiredEvaluations > 0
@@ -534,7 +532,7 @@ export function PromotionEvaluationPanel() {
                                     [selectedSupport.id]: clampScore(Number(e.target.value)),
                                   }))
                                 }
-                                className="w-18 rounded-md border border-white/15 bg-[#0f1426]/90 px-2 py-1 text-center text-sm text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-accent-blue)]/60"
+                                className="w-18 rounded-md border border-white/15 bg-[#1a1a1a] px-2 py-1 text-center text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50"
                               />
                             </div>
 
@@ -550,7 +548,7 @@ export function PromotionEvaluationPanel() {
                                   [selectedSupport.id]: clampScore(Number(e.target.value)),
                                 }))
                               }
-                              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/10 accent-[var(--color-accent-blue)]"
+                              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-white/10 accent-[#ffac00]"
                             />
 
                             <div className="grid grid-cols-3 gap-1 pt-1 text-[10px]">
@@ -582,7 +580,7 @@ export function PromotionEvaluationPanel() {
                                 }))
                               }
                               placeholder="Ingresa tu evaluación, contexto, o razón de tu puntaje..."
-                              className="min-h-20 w-full rounded-lg border border-white/10 bg-[#0f1426]/80 px-3 py-2.5 text-xs text-[var(--color-neutral-white)] placeholder-[var(--color-neutral-grey)]/60 outline-none transition focus:border-[var(--color-accent-blue)]/60 focus:bg-[#0f1426]"
+                              className="min-h-20 w-full rounded-lg border border-white/10 bg-[#1a1a1a] px-3 py-2.5 text-xs text-[var(--color-neutral-white)] placeholder-[var(--color-neutral-grey)]/60 outline-none transition focus:border-[#ffac00]/50 focus:bg-[#1a1a1a]"
                             />
                           </div>
 
@@ -590,7 +588,7 @@ export function PromotionEvaluationPanel() {
                             type="button"
                             onClick={() => saveEvaluation(selectedSupport.id)}
                             disabled={savingId === selectedSupport.id}
-                            className="w-full rounded-lg border border-[var(--color-accent-blue)]/40 bg-[var(--color-accent-blue)]/20 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[var(--color-neutral-white)] transition-all hover:border-[var(--color-accent-blue)]/60 hover:bg-[var(--color-accent-blue)]/30 disabled:opacity-50"
+                            className="w-full rounded-lg border border-[#ffac00]/40 bg-[#ffac00]/20 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#ffac00] transition-all hover:border-[#ffac00]/60 hover:bg-[#ffac00]/30 disabled:opacity-50"
                           >
                             {savingId === selectedSupport.id ? "Guardando evaluación..." : "Guardar evaluación"}
                           </button>

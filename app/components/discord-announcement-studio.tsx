@@ -27,7 +27,7 @@ export function DiscordAnnouncementStudio() {
     "Se habilito el nuevo sistema de tickets y panel de moderacion."
   );
   const [content, setContent] = useState("@everyone");
-  const [colorHex, setColorHex] = useState("#8C73F8");
+  const [colorHex, setColorHex] = useState("#ffac00");
   const [url, setUrl] = useState("");
   const [authorName, setAuthorName] = useState("Support Management");
   const [authorIconUrl, setAuthorIconUrl] = useState("");
@@ -151,7 +151,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                 required
               />
             </label>
@@ -160,8 +160,8 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={colorHex}
                 onChange={(e) => setColorHex(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
-                placeholder="#8C73F8"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
+                placeholder="#ffac00"
               />
             </label>
           </div>
@@ -171,7 +171,7 @@ export function DiscordAnnouncementStudio() {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-24 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+              className="min-h-24 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               required
             />
           </label>
@@ -182,7 +182,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                 placeholder="@everyone"
               />
             </label>
@@ -191,7 +191,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                 placeholder="https://..."
               />
             </label>
@@ -203,7 +203,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
             </label>
             <label className="space-y-2">
@@ -211,7 +211,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={authorIconUrl}
                 onChange={(e) => setAuthorIconUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
             </label>
           </div>
@@ -222,7 +222,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={thumbnailUrl}
                 onChange={(e) => setThumbnailUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
             </label>
             <label className="space-y-2">
@@ -230,7 +230,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
             </label>
           </div>
@@ -241,7 +241,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={footerText}
                 onChange={(e) => setFooterText(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
             </label>
             <label className="space-y-2">
@@ -249,7 +249,7 @@ export function DiscordAnnouncementStudio() {
               <input
                 value={footerIconUrl}
                 onChange={(e) => setFooterIconUrl(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
             </label>
           </div>
@@ -259,7 +259,7 @@ export function DiscordAnnouncementStudio() {
             <input
               value={announceKey}
               onChange={(e) => setAnnounceKey(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               placeholder="x-announce-key"
             />
           </label>
@@ -282,13 +282,13 @@ export function DiscordAnnouncementStudio() {
                   <input
                     value={field.name}
                     onChange={(e) => updateField(field.id, { name: e.target.value })}
-                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60 sm:col-span-4"
+                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50 sm:col-span-4"
                     placeholder="Nombre"
                   />
                   <input
                     value={field.value}
                     onChange={(e) => updateField(field.id, { value: e.target.value })}
-                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60 sm:col-span-5"
+                    className="rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50 sm:col-span-5"
                     placeholder="Valor"
                   />
                   <label className="flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-xs text-[var(--color-neutral-grey)] sm:col-span-2">
@@ -314,7 +314,7 @@ export function DiscordAnnouncementStudio() {
           <button
             type="submit"
             disabled={publish.loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-primary)]/45 bg-gradient-to-r from-[var(--color-primary)]/35 to-[var(--color-accent-blue)]/20 px-4 py-2.5 text-sm font-medium text-[var(--color-neutral-white)] transition-all duration-200 hover:shadow-[0_0_18px_rgba(140,115,248,0.45)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#ffac00]/40 bg-[#ffac00]/20 px-4 py-2.5 text-sm font-medium text-[#ffac00] transition-all duration-200 hover:shadow-[0_0_18px_rgba(255,172,0,0.4)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Send className="h-4 w-4" />
             {publish.loading ? "Publicando..." : "Publicar anuncio"}
@@ -333,7 +333,7 @@ export function DiscordAnnouncementStudio() {
         <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Preview</p>
         <div className="mt-3 rounded-xl border border-white/10 bg-[#2b2d31] p-4">
           {content ? <p className="mb-3 text-sm text-[#dbdee1]">{content}</p> : null}
-          <div className="rounded-md border-l-4 p-4" style={{ borderLeftColor: colorHex || "#8C73F8", background: "#1f2124" }}>
+          <div className="rounded-md border-l-4 p-4" style={{ borderLeftColor: colorHex || "#ffac00", background: "#1f2124" }}>
             {authorName ? (
               <p className="text-xs font-medium text-[#dbdee1]">{authorName}</p>
             ) : null}

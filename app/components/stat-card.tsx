@@ -12,7 +12,7 @@ type StatCardProps = {
 export function StatCard({ title, value, description, icon: Icon, gradient }: StatCardProps) {
   return (
     <UICard className={`group overflow-hidden bg-gradient-to-br ${gradient} p-[1px]`}>
-      <div className="rounded-[15px] bg-[#0d1329]/85 p-6 transition-transform duration-200 group-hover:scale-[1.01]">
+      <div className="rounded-[15px] bg-[#0d0d0d]/90 p-6 transition-transform duration-200 group-hover:scale-[1.01]">
         <div className="mb-6 flex items-center justify-between">
           <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">{title}</p>
           <div className="grid h-9 w-9 place-items-center rounded-lg border border-white/15 bg-white/[0.06] text-[var(--color-neutral-white)]">

@@ -28,7 +28,7 @@ export function HistoryTable({ data }: HistoryTableProps) {
         </div>
         <button
           type="button"
-          className="rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-xs uppercase tracking-wide text-[rgba(240,240,238,0.78)] transition-all duration-200 hover:border-[var(--color-primary)]/50 hover:text-[var(--color-neutral-white)]"
+          className="rounded-lg border border-white/15 bg-white/[0.03] px-3 py-2 text-xs uppercase tracking-wide text-[rgba(240,240,238,0.78)] transition-all duration-200 hover:border-[#ffac00]/50 hover:text-[var(--color-neutral-white)]"
         >
           All Activity
         </button>

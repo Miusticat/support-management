@@ -197,21 +197,21 @@ async function loadDashboardData() {
         value: String(activeSupportCount),
         description: "Total de supports en estado Activo",
         icon: UsersRound,
-        gradient: "from-[var(--color-accent-green)]/35 via-[var(--color-accent-blue)]/20 to-[var(--color-primary)]/25",
+        gradient: "from-[#ffac00]/20 via-[#ffac00]/10 to-[#e67e22]/15",
       },
       {
         title: "Casos Graves",
         value: String(gravesCount),
         description: "Warn Grave, Suspension y Remocion registradas.",
         icon: ShieldCheck,
-        gradient: "from-[var(--color-accent-orange)]/28 via-[var(--color-accent-yellow)]/20 to-[var(--color-accent-red)]/18",
+        gradient: "from-[#ffac00]/18 via-[#e67e22]/12 to-[#ff9800]/15",
       },
       {
         title: "Bajas del Equipo",
         value: String(expulsadosOrRenuncias),
         description: "Supports en estado Expulsado o Renuncio.",
         icon: UserX,
-        gradient: "from-[var(--color-accent-sky)]/25 via-[var(--color-primary)]/24 to-[var(--color-accent-red)]/18",
+        gradient: "from-[#ffac00]/15 via-[#e67e22]/18 to-[#ff9800]/12",
       },
     ],
     activityData: monthlyCounts.map((item) => ({ month: item.label, value: item.value })),
@@ -226,12 +226,7 @@ export default async function Home() {
   const { stats, activityData, breakdownData, trendBadge } = await loadDashboardData();
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#070b1b] text-[var(--color-neutral-white)]">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 -top-36 h-96 w-96 rounded-full bg-[var(--color-accent-blue)]/15 blur-3xl" />
-        <div className="absolute right-0 top-12 h-[28rem] w-[28rem] rounded-full bg-[var(--color-primary)]/22 blur-3xl" />
-        <div className="absolute bottom-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[var(--color-accent-green)]/10 blur-3xl" />
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-[#0d0d0d] text-[var(--color-neutral-white)]">
 
       <Sidebar />
       <TopNavbar />

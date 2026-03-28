@@ -24,7 +24,7 @@ export function ChartCard({
           <p className="mt-1 text-sm text-[var(--color-neutral-grey)]">{subtitle}</p>
         </div>
         {badge ? (
-          <span className="rounded-lg border border-[color:var(--color-accent-sky)]/35 bg-[color:var(--color-accent-blue)]/15 px-2 py-1 text-xs uppercase tracking-wide text-[var(--color-accent-sky)]">
+          <span className="rounded-lg border border-[#ffac00]/35 bg-[#ffac00]/15 px-2 py-1 text-xs uppercase tracking-wide text-[#ffac00]">
             {badge}
           </span>
         ) : null}

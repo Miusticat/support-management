@@ -118,8 +118,8 @@ const policyInfractions: Record<string, PolicyInfraction[]> = {
 
 const sanctionOptions = ["Advertencia", "Warn Intermedio", "Warn Grave", "Suspension", "Remocion"];
 const selectClassName =
-  "w-full rounded-xl border border-white/10 bg-[#0f1426] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-primary)]/60";
-const optionClassName = "bg-[#0f1426] text-[var(--color-neutral-white)]";
+  "w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50";
+const optionClassName = "bg-[#1a1a1a] text-[var(--color-neutral-white)]";
 
 function todayAsSanctionDate() {
   const date = new Date();
@@ -796,7 +796,7 @@ export function DiscordSanctionStudio() {
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
                 required
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
               {!dateIsValid ? (
                 <p className="text-xs text-[var(--color-accent-red)]">Formato esperado: DD/MM/AA</p>
@@ -812,7 +812,7 @@ export function DiscordSanctionStudio() {
                 value={adminSanciona}
                 readOnly
                 required
-                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               />
               <p className="text-xs text-[var(--color-neutral-grey)]">Se completa automaticamente con tu login actual.</p>
             </label>
@@ -862,7 +862,7 @@ export function DiscordSanctionStudio() {
                 <input
                   value={supportPcuLink}
                   onChange={(e) => setSupportPcuLink(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                   placeholder="https://pcu-es.gta.world/view/user/xxxx"
                 />
                 {supportPcuLink.trim() && !pcuLinkIsValid ? (
@@ -911,7 +911,7 @@ export function DiscordSanctionStudio() {
               value={motivo}
               onChange={(e) => setMotivo(e.target.value)}
               required
-              className="min-h-24 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+              className="min-h-24 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               placeholder="Describe el hecho con redaccion formal: contexto, falta detectada, evaluacion y medida aplicada."
             />
             <p className="text-xs text-[var(--color-neutral-grey)]">
@@ -948,7 +948,7 @@ export function DiscordSanctionStudio() {
               <textarea
                 value={pruebas}
                 onChange={(e) => setPruebas(e.target.value)}
-                className="min-h-20 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                className="min-h-20 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                 placeholder="Links, clips, screenshots"
               />
             </label>
@@ -992,7 +992,7 @@ export function DiscordSanctionStudio() {
                   min={0}
                   value={prevAdvertencias}
                   readOnly
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                 />
               </label>
               <label className="space-y-1">
@@ -1002,7 +1002,7 @@ export function DiscordSanctionStudio() {
                   min={0}
                   value={prevWarnIntermedios}
                   readOnly
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                 />
               </label>
               <label className="space-y-1">
@@ -1012,7 +1012,7 @@ export function DiscordSanctionStudio() {
                   min={0}
                   value={prevWarnGraves}
                   readOnly
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-sm outline-none focus:border-[#ffac00]/50"
                 />
               </label>
             </div>
@@ -1024,7 +1024,7 @@ export function DiscordSanctionStudio() {
             <textarea
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              className="min-h-20 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[var(--color-primary)]/60"
+              className="min-h-20 w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm outline-none focus:border-[#ffac00]/50"
               placeholder="Contexto adicional, actitud, historial previo..."
             />
           </label>

@@ -1,20 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  --background: #070b1b;
-  --foreground: #f0f0ee;
-  --color-primary: #8c73f8;
-  --color-accent-yellow: #faff00;
-  --color-accent-red: #ff6b84;
-  --color-accent-green: #7cffb5;
-  --color-accent-orange: #ffd65a;
-  --color-accent-blue: #38a5ff;
-  --color-accent-sky: #a6ddff;
-  --color-neutral-white: #f0f0ee;
-  --color-neutral-black: #0f0f0f;
-  --color-neutral-grey: #585858;
-  --surface-glass: rgba(15, 15, 15, 0.62);
-  --surface-glass-strong: rgba(15, 15, 15, 0.82);
+  --background: #0d0d0d;
+  --foreground: #e5e7eb;
+  --color-primary: #ffac00;
+  --color-primary-dark: #e67e22;
+  --color-accent-yellow: #ffac00;
+  --color-accent-red: #f44336;
+  --color-accent-green: #4caf50;
+  --color-accent-orange: #ff9800;
+  --color-accent-blue: #ffac00;
+  --color-accent-sky: #ffd580;
+  --color-neutral-white: #e5e7eb;
+  --color-neutral-black: #0d0d0d;
+  --color-neutral-grey: #9ca3af;
+  --color-surface: #141414;
+  --color-surface-hover: #1a1a1a;
+  --surface-glass: #141414;
+  --surface-glass-strong: #141414;
 }
 
 @theme inline {
@@ -23,15 +26,29 @@
   --font-sans: var(--font-inter);
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 172, 0, 0.3) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 172, 0, 0.3);
+  border-radius: 3px;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "PT Root UI", var(--font-inter), "Segoe UI", sans-serif;
-  background-image:
-    radial-gradient(circle at 11% 0%, rgba(56, 165, 255, 0.15), transparent 26%),
-    radial-gradient(circle at 86% 16%, rgba(140, 115, 248, 0.23), transparent 30%),
-    radial-gradient(circle at 50% 100%, rgba(124, 255, 181, 0.1), transparent 30%),
-    linear-gradient(165deg, #06091a 0%, #0a0f26 44%, #07080f 100%);
+  font-family: var(--font-inter), "Segoe UI", sans-serif;
 }
 
 * {
@@ -39,6 +56,6 @@ body {
 }
 
 ::selection {
-  background: rgba(140, 115, 248, 0.35);
+  background: rgba(255, 172, 0, 0.35);
   color: #ffffff;
 }

@@ -82,7 +82,7 @@ export default async function DiscordBotCallbackPage({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl items-center justify-center px-4">
-      <section className="w-full rounded-2xl border border-white/10 bg-[color:var(--surface-glass)] p-6 backdrop-blur-xl">
+      <section className="w-full rounded-2xl border border-white/10 bg-[#141414] p-6">
         <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">
           Discord Bot Invite
         </p>
@@ -112,7 +112,7 @@ export default async function DiscordBotCallbackPage({
 
         <Link
           href="/"
-          className="mt-5 inline-flex rounded-xl border border-[var(--color-primary)]/45 bg-[var(--color-primary)]/15 px-4 py-2 text-sm font-medium text-[var(--color-neutral-white)] transition-all duration-200 hover:bg-[var(--color-primary)]/25"
+          className="mt-5 inline-flex rounded-xl border border-[#ffac00]/40 bg-[#ffac00]/20 px-4 py-2 text-sm font-medium text-[#ffac00] transition-all duration-200 hover:bg-[#ffac00]/30"
         >
           Volver al dashboard
         </Link>

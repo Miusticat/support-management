@@ -53,7 +53,7 @@ function Item({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${
         active
-          ? "bg-gradient-to-r from-[var(--color-primary)]/35 to-[var(--color-accent-blue)]/20 text-[var(--color-neutral-white)] shadow-[0_0_20px_rgba(140,115,248,0.32)]"
+          ? "bg-[#ffac00]/15 text-[#ffac00] border-l-2 border-[#ffac00]"
           : "text-[var(--color-neutral-grey)] hover:bg-white/5 hover:text-[var(--color-neutral-white)]"
       }`}
     >
@@ -97,9 +97,9 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="fixed left-5 top-5 z-40 hidden h-[calc(100vh-2.5rem)] w-64 flex-col rounded-2xl border border-white/10 bg-[color:var(--surface-glass-strong)] p-4 shadow-[0_25px_60px_rgba(6,9,30,0.65)] backdrop-blur-2xl lg:flex">
-        <div className="mb-8 flex items-center gap-3 rounded-xl border border-[var(--color-primary)]/25 bg-white/[0.03] px-3 py-3">
-          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-lg border border-white/15 bg-[#0b1022]">
+      <aside className="fixed left-5 top-5 z-40 hidden h-[calc(100vh-2.5rem)] w-64 flex-col rounded-2xl border border-white/10 bg-[#141414] p-4 shadow-[0_25px_60px_rgba(0,0,0,0.65)] lg:flex">
+        <div className="mb-8 flex items-center gap-3 rounded-xl border border-[#ffac00]/20 bg-[#ffac00]/5 px-3 py-3">
+          <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-lg border border-white/15 bg-[#1a1a1a]">
             <Image src="/img/logo.png" alt="Support Management System" width={36} height={36} className="h-8 w-8 object-contain" />
           </div>
           <div>
@@ -121,7 +121,7 @@ export function Sidebar() {
         </div>
       </aside>
 
-      <nav className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-1.5rem)] -translate-x-1/2 items-center justify-between gap-2 rounded-2xl border border-white/15 bg-[color:var(--surface-glass-strong)] p-2 shadow-[0_20px_50px_rgba(6,9,30,0.6)] backdrop-blur-xl lg:hidden">
+      <nav className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-1.5rem)] -translate-x-1/2 items-center justify-between gap-2 rounded-2xl border border-white/15 bg-[#141414] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.6)] lg:hidden">
         {visiblePrimaryItems.map((item) => {
           const Icon = item.icon;
           const active = isItemActive(pathname, item.href);
@@ -132,7 +132,7 @@ export function Sidebar() {
               href={item.href}
               className={`flex flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] transition-all ${
                 active
-                  ? "bg-[var(--color-primary)]/25 text-[var(--color-neutral-white)]"
+                  ? "bg-[#ffac00]/15 text-[#ffac00]"
                   : "text-[var(--color-neutral-grey)] hover:bg-white/5"
               }`}
             >

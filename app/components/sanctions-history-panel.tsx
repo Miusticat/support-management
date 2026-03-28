@@ -134,14 +134,14 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Buscar por support, admin o ID"
-                  className="w-full rounded-xl border border-white/10 bg-[#0f1426] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-primary)]/60 sm:w-72"
+                  className="w-full rounded-xl border border-white/10 bg-[#1a1a1a] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50 sm:w-72"
                 />
               </label>
 
               <select
                 value={sanctionFilter}
                 onChange={(e) => setSanctionFilter(e.target.value)}
-                className="rounded-xl border border-white/10 bg-[#0f1426] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[var(--color-primary)]/60"
+                className="rounded-xl border border-white/10 bg-[#1a1a1a] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/50"
                 style={{ colorScheme: "dark" }}
               >
                 <option value="all">Todas las sanciones</option>
@@ -156,7 +156,7 @@ export function SanctionsHistoryPanel({ sanctions }: SanctionsHistoryPanelProps)
 
           <div className="mt-4 max-h-[32rem] overflow-auto rounded-xl border border-white/10">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="sticky top-0 bg-[#11182f] text-[var(--color-neutral-grey)]">
+              <thead className="sticky top-0 bg-[#1a1a1a] text-[var(--color-neutral-grey)]">
                 <tr>
                   <th className="px-3 py-2 font-medium">Fecha</th>
                   <th className="px-3 py-2 font-medium">Support</th>
