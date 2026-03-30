@@ -783,115 +783,64 @@ export function DiscordSanctionStudio() {
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
       <UICard className="xl:col-span-7 p-6">
-        <div className="mb-5 flex items-start gap-3">
+        <div className="mb-8 flex items-start gap-3">
           <div className="mt-1 grid h-9 w-9 place-items-center rounded-lg border border-[var(--color-accent-red)]/35 bg-[var(--color-accent-red)]/15 text-[var(--color-accent-red)]">
             <AlertTriangle className="h-4 w-4" />
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Discord</p>
-            <h2 className="mt-1 text-2xl font-semibold text-[var(--color-neutral-white)]">Registro de Sanciones</h2>
+            <h2 className="mt-1 text-2xl font-semibold text-[var(--color-neutral-white)]">Registrar Sanción</h2>
             <p className="mt-2 text-sm text-[var(--color-neutral-grey)]">
-              Completa el formato interno y publica el registro en el canal de sanciones.
+              Completa solo los campos esenciales. El resto se genera automáticamente.
             </p>
           </div>
         </div>
 
-        <div className="mb-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-          <p className="text-xs text-[var(--color-neutral-grey)]">
-            Formato optimizado para registrar sanciones de forma clara y consistente.
-          </p>
-        </div>
+        <form onSubmit={publishSanction} className="space-y-5">
+          {/* Support Selection - Primary Section */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Support a sancionar</span>
+              <select
+                value={supportDiscordId}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  setSupportDiscordId(selectedId);
 
-        <form onSubmit={publishSanction} className="space-y-4">
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">1. Fecha</p>
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Fecha (DD/MM/AA)</span>
-              <input
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
+                  const selectedSupport = supportOptions.find(
+                    (support) => support.id === selectedId
+                  );
+                  setSupportSancionado(selectedSupport?.displayName ?? "");
+                }}
                 required
-                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-              />
-              {!dateIsValid ? (
-                <p className="text-xs text-[var(--color-accent-red)]">Formato esperado: DD/MM/AA</p>
+                className={selectClassName}
+                style={{ colorScheme: "dark" }}
+                disabled={supportOptionsLoading || supportOptions.length === 0}
+              >
+                <option value="" className={optionClassName}>
+                  {supportOptionsLoading ? "Cargando supports..." : "Selecciona un support"}
+                </option>
+                {supportOptions.map((support) => (
+                  <option key={support.id} value={support.id} className={optionClassName}>
+                    {support.displayName}
+                  </option>
+                ))}
+              </select>
+              {supportOptionsError ? (
+                <p className="mt-2 text-xs text-[var(--color-accent-red)]">{supportOptionsError}</p>
+              ) : null}
+              {!supportOptionsLoading && supportOptions.length === 0 && !supportOptionsError ? (
+                <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">
+                  No se encontraron miembros con rol Support.
+                </p>
               ) : null}
             </label>
           </div>
 
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">2. Datos del Admin que sanciona</p>
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Admin que sanciona (sesion activa)</span>
-              <input
-                value={adminSanciona}
-                readOnly
-                required
-                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-              />
-              <p className="text-xs text-[var(--color-neutral-grey)]">Se completa automaticamente con tu login actual.</p>
-            </label>
-          </div>
-
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">3. Datos del Support Sancionado</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Elegir Support Sancionado</span>
-                <select
-                  value={supportDiscordId}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    setSupportDiscordId(selectedId);
-
-                    const selectedSupport = supportOptions.find(
-                      (support) => support.id === selectedId
-                    );
-                    setSupportSancionado(selectedSupport?.displayName ?? "");
-                  }}
-                  required
-                  className={selectClassName}
-                  style={{ colorScheme: "dark" }}
-                  disabled={supportOptionsLoading || supportOptions.length === 0}
-                >
-                  <option value="" className={optionClassName}>
-                    {supportOptionsLoading ? "Cargando supports..." : "Selecciona un Support"}
-                  </option>
-                  {supportOptions.map((support) => (
-                    <option key={support.id} value={support.id} className={optionClassName}>
-                      {support.displayName}
-                    </option>
-                  ))}
-                </select>
-                {supportOptionsError ? (
-                  <p className="text-xs text-[var(--color-accent-red)]">{supportOptionsError}</p>
-                ) : null}
-                {!supportOptionsLoading && supportOptions.length === 0 && !supportOptionsError ? (
-                  <p className="text-xs text-[var(--color-neutral-grey)]">
-                    No se encontraron miembros con rol Support en Discord.
-                  </p>
-                ) : null}
-              </label>
-              <label className="space-y-2">
-                <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Link de PCU</span>
-                <input
-                  value={supportPcuLink}
-                  onChange={(e) => setSupportPcuLink(e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-                  placeholder="https://pcu-es.gta.world/view/user/xxxx"
-                />
-                {supportPcuLink.trim() && !pcuLinkIsValid ? (
-                  <p className="text-xs text-[var(--color-accent-red)]">El link debe iniciar con http:// o https://</p>
-                ) : null}
-              </label>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">4. Evaluación de la falta</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Bloque de evaluacion</span>
+          {/* Infraction Type - Quick Selection */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Tipo de falta</span>
               <select
                 value={policyCategory}
                 onChange={(e) => selectPolicyCategory(e.target.value)}
@@ -905,81 +854,45 @@ export function DiscordSanctionStudio() {
                 ))}
               </select>
             </label>
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Falta especifica (tabla)</span>
-              <select
-                value={policyFault}
-                onChange={(e) => selectInfraction(e.target.value)}
-                className={selectClassName}
-                style={{ colorScheme: "dark" }}
-              >
-                {currentInfractions.map((infraction) => (
-                  <option key={infraction.fault} value={infraction.fault} className={optionClassName}>
-                    {infraction.fault}
-                  </option>
-                ))}
-              </select>
+          </div>
+
+          {/* Description - Core Field */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">¿Qué sucedió?</span>
+              <textarea
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                required
+                className="min-h-24 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+                placeholder="Describe brevemente el incidente: qué pasó, cuándo y por qué."
+              />
+              <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">
+                Sé conciso y objetivo. Incluye hechos verificables e impacto.
+              </p>
             </label>
-            </div>
           </div>
 
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">5. Motivo</p>
-          <label className="space-y-2 block">
-            <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Motivo</span>
-            <textarea
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              required
-              className="min-h-24 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-              placeholder="Describe el hecho con redaccion formal: contexto, falta detectada, evaluacion y medida aplicada."
-            />
-            <p className="text-xs text-[var(--color-neutral-grey)]">
-              Redacta de forma objetiva, profesional y centrada en hechos verificables.
-            </p>
-          </label>
-          </div>
-
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">6. Categorías</p>
-          <div className="space-y-2">
-            <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Categorias</span>
-            <div className="flex flex-wrap gap-2">
-              {categoryOptions.map((category) => {
-                const active = categorias.includes(category);
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => toggleCategory(category)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs transition-all duration-200 ${
-                      active
-                        ? "border-[var(--color-accent-red)]/45 bg-[var(--color-accent-red)]/18 text-[var(--color-accent-red)]"
-                        : "border-white/[0.08] bg-white/[0.03] text-[var(--color-neutral-grey)] hover:text-[var(--color-neutral-white)]"
-                    }`}
-                  >
-                    {category}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          </div>
-
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">7. Pruebas y sanción</p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Pruebas</span>
+          {/* Evidence */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Evidencia (opcional)</span>
               <textarea
                 value={pruebas}
                 onChange={(e) => setPruebas(e.target.value)}
-                className="min-h-20 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-                placeholder="Links, clips, screenshots"
+                className="min-h-16 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+                placeholder="Links, clips, capturas de pantalla, mensajes..."
               />
+              <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">
+                Agrega links o referencias que respalden el caso.
+              </p>
             </label>
-            <label className="space-y-2">
-              <span className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Sancion</span>
+          </div>
+
+          {/* Sanction Selection */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Sanción propuesta</span>
               <select
                 value={sancion}
                 onChange={(e) => setSancion(e.target.value)}
@@ -992,111 +905,244 @@ export function DiscordSanctionStudio() {
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-[var(--color-neutral-grey)]">{levelText}</p>
+              <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">Nivel: {levelText}</p>
               {recommendedSanction !== sancion ? (
                 <button
                   type="button"
                   onClick={() => setSancion(recommendedSanction)}
-                  className="mt-1 rounded-lg border border-[var(--color-accent-orange)]/40 bg-[var(--color-accent-orange)]/12 px-2.5 py-1 text-xs text-[var(--color-accent-orange)]"
+                  className="mt-2 rounded-lg border border-[var(--color-accent-orange)]/40 bg-[var(--color-accent-orange)]/12 px-3 py-2 text-xs text-[var(--color-accent-orange)]"
                 >
-                  Aplicar sugerencia: {recommendedSanction}
+                  💡 Sugerencia: {recommendedSanction}
                 </button>
               ) : null}
             </label>
           </div>
-          </div>
 
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">8. Acumulación y antecedentes</p>
-            {historyLoading ? (
-              <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">Cargando antecedentes desde BD...</p>
-            ) : null}
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <label className="space-y-1">
-                <span className="text-xs text-[var(--color-neutral-grey)]">Advertencias previas</span>
+          {/* Accumulated History - Auto-loaded */}
+          {supportDiscordId && (
+            <div className="rounded-xl border border-[var(--color-accent-orange)]/20 bg-[var(--color-accent-orange)]/8 p-5">
+              <p className="mb-3 text-xs font-medium text-[var(--color-accent-orange)]">Antecedentes detectados</p>
+              {historyLoading ? (
+                <p className="text-xs text-[var(--color-neutral-grey)]">Cargando...</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-center">
+                    <p className="text-xs text-[var(--color-neutral-grey)]">Advertencias</p>
+                    <p className="text-lg font-bold text-[var(--color-neutral-white)]">{prevAdvertencias}</p>
+                  </div>
+                  <div className="rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-center">
+                    <p className="text-xs text-[var(--color-neutral-grey)]">Warns int.</p>
+                    <p className="text-lg font-bold text-[var(--color-neutral-white)]">{prevWarnIntermedios}</p>
+                  </div>
+                  <div className="rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-center">
+                    <p className="text-xs text-[var(--color-neutral-grey)]">Warns grav.</p>
+                    <p className="text-lg font-bold text-[var(--color-neutral-white)]">{prevWarnGraves}</p>
+                  </div>
+                </div>
+              )}
+              {accumulationNote && (
+                <p className="mt-3 text-xs italic text-[var(--color-accent-orange)]">{accumulationNote}</p>
+              )}
+            </div>
+          )}
+
+          {/* Optional Fields */}
+          <details className="group">
+            <summary className="cursor-pointer rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-sm font-medium text-[var(--color-neutral-white)]">
+              ⚙️ Campos avanzados (opcional)
+            </summary>
+            <div className="mt-3 space-y-4 border border-white/[0.06] bg-white/[0.02] p-5 rounded-lg">
+              {/* PCU Link */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Link de PCU</span>
                 <input
-                  type="number"
-                  min={0}
-                  value={prevAdvertencias}
-                  readOnly
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+                  value={supportPcuLink}
+                  onChange={(e) => setSupportPcuLink(e.target.value)}
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+                  placeholder="https://pcu-es.gta.world/view/user/xxxx"
+                />
+                {supportPcuLink.trim() && !pcuLinkIsValid ? (
+                  <p className="mt-1 text-xs text-[var(--color-accent-red)]">Debe empezar con http:// o https://</p>
+                ) : null}
+              </label>
+
+              {/* Specific Infraction */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Falta específica</span>
+                <select
+                  value={policyFault}
+                  onChange={(e) => selectInfraction(e.target.value)}
+                  className={selectClassName}
+                  style={{ colorScheme: "dark" }}
+                >
+                  {currentInfractions.map((infraction) => (
+                    <option key={infraction.fault} value={infraction.fault} className={optionClassName}>
+                      {infraction.fault}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Tags */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Categorías</span>
+                <div className="flex flex-wrap gap-2">
+                  {categoryOptions.map((category) => {
+                    const active = categorias.includes(category);
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => toggleCategory(category)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs transition-all duration-200 ${
+                          active
+                            ? "border-[var(--color-accent-red)]/45 bg-[var(--color-accent-red)]/18 text-[var(--color-accent-red)]"
+                            : "border-white/[0.08] bg-white/[0.03] text-[var(--color-neutral-grey)] hover:text-[var(--color-neutral-white)]"
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+              </label>
+
+              {/* Observations */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Observaciones finales</span>
+                <textarea
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  className="min-h-14 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+                  placeholder="Contexto adicional, notas internas, historial..."
                 />
               </label>
-              <label className="space-y-1">
-                <span className="text-xs text-[var(--color-neutral-grey)]">Warn Intermedios previos</span>
+
+              {/* Date */}
+              <label className="block">
+                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Fecha (DD/MM/AA)</span>
                 <input
-                  type="number"
-                  min={0}
-                  value={prevWarnIntermedios}
-                  readOnly
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
                 />
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs text-[var(--color-neutral-grey)]">Warn Graves previos</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={prevWarnGraves}
-                  readOnly
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-                />
+                {!dateIsValid ? (
+                  <p className="mt-1 text-xs text-[var(--color-accent-red)]">Formato: DD/MM/AA</p>
+                ) : null}
               </label>
             </div>
-            <p className="mt-3 text-xs text-[var(--color-accent-orange)]">{accumulationNote}</p>
-          </div>
+          </details>
 
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-            <p className="mb-3 text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">9. Observaciones</p>
-            <textarea
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              className="min-h-20 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-              placeholder="Contexto adicional, actitud, historial previo..."
-            />
-          </div>
-
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={publish.loading || missingRequired.length > 0 || !dateIsValid || !pcuLinkIsValid}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--color-accent-red)]/45 bg-[var(--color-accent-red)]/14 px-4 py-2.5 text-sm font-medium text-[var(--color-neutral-white)] transition-all duration-200 hover:bg-[var(--color-accent-red)]/24 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl border border-[var(--color-accent-red)]/45 bg-[var(--color-accent-red)]/14 px-4 py-3 text-sm font-medium text-[var(--color-neutral-white)] transition-all duration-200 hover:bg-[var(--color-accent-red)]/24 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Send className="h-4 w-4" />
+            <Send className="mb-0.5 mr-2 inline h-4 w-4" />
             {publish.loading ? "Registrando..." : "Registrar sanción"}
           </button>
 
+          {/* Messages */}
           {missingRequired.length > 0 ? (
-            <p className="text-xs text-[var(--color-neutral-grey)]">
-              Obligatorios pendientes: {missingRequired.join(", ")}
-            </p>
+            <div className="rounded-lg border border-[var(--color-accent-red)]/20 bg-[var(--color-accent-red)]/8 p-3 text-xs text-[var(--color-accent-red)]">
+              Completa: {missingRequired.join(", ")}
+            </div>
           ) : null}
 
           {publish.error ? (
-            <p className="text-sm text-[var(--color-accent-red)]">{publish.error}</p>
+            <div className="rounded-lg border border-[var(--color-accent-red)]/20 bg-[var(--color-accent-red)]/8 p-3 text-xs text-[var(--color-accent-red)]">
+              {publish.error}
+            </div>
           ) : null}
           {publish.success ? (
-            <p className="text-sm text-[var(--color-accent-green)]">{publish.success}</p>
+            <div className="rounded-lg border border-[var(--color-accent-green)]/20 bg-[var(--color-accent-green)]/8 p-3 text-xs text-[var(--color-accent-green)]">
+              ✓ {publish.success}
+            </div>
           ) : null}
         </form>
       </UICard>
 
-      <UICard className="xl:col-span-5 p-6">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-neutral-grey)]">Preview — Components v2</p>
+      <UICard className="xl:col-span-5 p-6 sticky top-24">
+        <div className="mb-6 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-medium text-[var(--color-neutral-white)]">Resumen</h3>
           <button
             type="button"
             onClick={copyPreview}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1.5 text-xs text-[var(--color-neutral-grey)]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] px-2.5 py-1.5 text-xs text-[var(--color-neutral-grey)] hover:text-[var(--color-neutral-white)] transition-colors"
           >
             <Clipboard className="h-3.5 w-3.5" />
             Copiar
           </button>
         </div>
-        {copyStatus ? <p className="mt-2 text-xs text-[var(--color-accent-green)]">{copyStatus}</p> : null}
-        <div className="mt-3 rounded-xl border border-white/[0.06] bg-[#2b2d31] p-4">
+        {copyStatus ? <p className="mb-4 text-xs text-[var(--color-accent-green)]">✓ {copyStatus}</p> : null}
+        
+        <div className="space-y-4">
+          {/* Current Selection Summary */}
+          {supportSancionado && (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="text-xs uppercase text-[var(--color-neutral-grey)] mb-2">Support</p>
+              <p className="text-sm font-semibold text-[var(--color-neutral-white)]">{supportSancionado}</p>
+            </div>
+          )}
+
+          {motivo && (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="text-xs uppercase text-[var(--color-neutral-grey)] mb-2">Lo ocurrido</p>
+              <p className="text-xs text-[var(--color-neutral-grey)] leading-relaxed">{motivo.slice(0, 150)}{motivo.length > 150 ? "..." : ""}</p>
+            </div>
+          )}
+
+          {/* Sanction Summary */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-xs uppercase text-[var(--color-neutral-grey)] mb-3">Sanción propuesta</p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-[var(--color-neutral-white)]">{sancion}</span>
+              <span className="text-xs rounded-lg px-3 py-1.5" style={{ color: sanctionAccentColor(sancion), backgroundColor: `${sanctionAccentColor(sancion)}20` }}>
+                {levelText}
+              </span>
+            </div>
+          </div>
+
+          {/* Final Sanction (if different) */}
+          {previewFinalSanction !== sancion && (
+            <div className="rounded-xl border border-[var(--color-accent-orange)]/30 bg-[var(--color-accent-orange)]/8 p-4">
+              <p className="text-xs uppercase text-[var(--color-accent-orange)] mb-2 font-medium">Sanción Final</p>
+              <span className="text-sm font-semibold rounded-lg px-3 py-1.5" style={{ color: sanctionAccentColor(previewFinalSanction), backgroundColor: `${sanctionAccentColor(previewFinalSanction)}20` }}>
+                {previewFinalSanction} ({previewFinalLevel})
+              </span>
+            </div>
+          )}
+
+          {/* Categorías */}
+          {categorias.length > 0 && (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="text-xs uppercase text-[var(--color-neutral-grey)] mb-2">Categorías</p>
+              <div className="flex flex-wrap gap-1.5">
+                {categorias.map(cat => (
+                  <span key={cat} className="text-xs rounded-md border border-[var(--color-accent-red)]/30 bg-[var(--color-accent-red)]/10 text-[var(--color-accent-red)] px-2 py-1">
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Evidence Indicator */}
+          {pruebas && (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <p className="text-xs uppercase text-[var(--color-neutral-grey)] mb-2">Evidencia</p>
+              <p className="text-xs text-[var(--color-neutral-grey)]">✓ Añadida ({pruebas.length} caracteres)</p>
+            </div>
+          )}
+        </div>
+
+        {/* Discord Preview (Old Style - More Compact) */}
+        <div className="mt-6 rounded-xl border border-white/[0.06] bg-[#2b2d31] p-0 overflow-hidden">
           {/* Bot identity */}
-          <div className="mb-3 flex items-center gap-2">
-            <div className="grid h-6 w-6 place-items-center rounded-full bg-[#5865f2] text-[8px] font-bold text-white">
+          <div className="p-4 border-b border-white/[0.06] bg-[#1e1f22] flex items-center gap-2">
+            <div className="grid h-5 w-5 place-items-center rounded-full bg-[#5865f2] text-[7px] font-bold text-white">
               SM
             </div>
             <span className="text-sm font-semibold text-[#f2f3f5]">Support Management</span>
@@ -1111,7 +1157,7 @@ export function DiscordSanctionStudio() {
 
           {/* Container with accent color */}
           <div
-            className="overflow-hidden rounded-lg"
+            className="overflow-hidden"
             style={{ background: "#1e1f22", borderLeft: `3px solid ${previewAccentColor}` }}
           >
             <div className="p-4 space-y-3">
@@ -1121,87 +1167,39 @@ export function DiscordSanctionStudio() {
                 <h3 className="text-base font-bold text-[#f2f3f5]">Registro de Sanción</h3>
               </div>
 
-              {/* Admin block */}
-              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
-                {previewDescription.adminBlock}
-              </p>
-
-              <div className="border-t border-white/[0.06]" />
-
-              {/* Support block */}
-              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
-                {previewDescription.supportBlock}
-              </p>
-
-              <div className="border-t border-white/[0.06]" />
-
-              {/* Motivo */}
-              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
-                {previewDescription.motivoBlock}
-              </p>
-
-              <div className="border-t border-white/[0.06]" />
-
-              {/* Eval fields */}
-              <div className="grid grid-cols-3 gap-2">
-                {previewDescription.evalFields.map((f, i) => (
-                  <div key={i}>
-                    <p className="text-xs font-semibold text-[#f2f3f5]">{f.name}</p>
-                    <p className="text-xs text-[#dbdee1]">{f.value}</p>
-                  </div>
-                ))}
+              {/* Sanction highlight */}
+              <div className="rounded bg-[#2b2d31] border-l-4 p-3" style={{ borderColor: previewAccentColor }}>
+                <p className="text-xs font-semibold text-[#949ba4]">Sanción final</p>
+                <p className="text-sm font-bold text-[#f2f3f5]">{previewFinalSanction} ({previewFinalLevel})</p>
               </div>
 
-              <div className="border-t border-white/[0.06]" />
+              {/* Info Section */}
+              {supportSancionado && (
+                <>
+                  <div className="border-t border-white/[0.15]" />
+                  <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">**Support:** {supportSancionado}</p>
+                </>
+              )}
 
-              {/* Pruebas */}
-              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
-                {previewDescription.pruebasBlock}
-              </p>
+              {motivo && (
+                <>
+                  <div className="border-t border-white/[0.15]" />
+                  <p className="text-sm text-[#dbdee1]"><strong>Motivo:</strong></p>
+                  <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">{motivo}</p>
+                </>
+              )}
 
-              <div className="border-t border-white/[0.06]" />
-
-              {/* Sanction fields */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <p className="text-xs font-semibold text-[#f2f3f5]">Sanción solicitada</p>
-                  <p className="text-xs text-[#dbdee1]">{sancion} ({levelText})</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-[#f2f3f5]">Sanción final aplicada</p>
-                  <span className="mt-0.5 inline-block rounded px-1.5 py-0.5 text-xs font-semibold" style={{ color: previewAccentColor, backgroundColor: `${previewAccentColor}20` }}>
-                    {previewFinalSanction} ({previewFinalLevel})
-                  </span>
-                </div>
-              </div>
-
-              <div className="border-t border-white/[0.06]" />
-
-              {/* Accumulation fields */}
-              <div className="grid grid-cols-3 gap-2">
-                {previewDescription.accumulationFields.map((f, i) => (
-                  <div key={i}>
-                    <p className="text-xs font-semibold text-[#f2f3f5]">{f.name}</p>
-                    <p className="text-xs text-[#dbdee1]">{f.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Accumulation note as blockquote */}
-              <div className="border-l-2 border-white/[0.15] pl-3 py-0.5">
-                <p className="text-xs text-[#dbdee1]/80">{previewDescription.accumulationNoteText}</p>
-              </div>
-
-              <div className="border-t border-white/[0.06]" />
-
-              {/* Observaciones */}
-              <p className="text-sm text-[#dbdee1] whitespace-pre-wrap">
-                {previewDescription.observacionesBlock}
-              </p>
+              {pruebas && (
+                <>
+                  <div className="border-t border-white/[0.15]" />
+                  <p className="text-sm text-[#dbdee1]"><strong>Evidencia:</strong></p>
+                  <p className="text-sm text-[#dbdee1]">{pruebas}</p>
+                </>
+              )}
 
               {/* Footer */}
-              <div className="border-t border-white/[0.06]" />
-              <p className="text-[11px] text-[#949ba4]">Support Management | Registro interno</p>
+              <div className="border-t border-white/[0.15]" />
+              <p className="text-[11px] text-[#949ba4]">Generado por Support Management</p>
             </div>
           </div>
         </div>
