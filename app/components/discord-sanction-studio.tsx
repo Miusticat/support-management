@@ -26,7 +26,28 @@ type PolicyInfraction = {
   tags: string[];
 };
 
-const categoryOptions = ["Conducta", "Staff", "RP", "Comandos", "Criterio", "Actividad", "Ausencias"];
+type SelectedInfraction = {
+  category: string;
+  fault: string;
+  sanction: string;
+  tags: string[];
+};
+
+const categoryOptions = [
+  "Conducta",
+  "Staff",
+  "RP",
+  "Comandos",
+  "Criterio",
+  "Actividad",
+  "Ausencias",
+  "Tickets",
+  "Comunicacion",
+  "Tiempo",
+  "Confidencialidad",
+  "OffDuty",
+  "Compromiso",
+];
 const defaultPolicyCategory = "Conducta y actitud";
 
 const policyInfractions: Record<string, PolicyInfraction[]> = {
@@ -234,9 +255,125 @@ const policyInfractions: Record<string, PolicyInfraction[]> = {
       tags: ["Ausencias", "Actividad"],
     },
   ],
+  "Calidad en la gestion de tickets": [
+    {
+      fault: "Atender tickets de forma superficial o incompleta",
+      sanction: "Advertencia",
+      tags: ["Tickets", "Criterio"],
+    },
+    {
+      fault: "Priorizar cantidad de tickets sobre calidad de atencion (ticket farming)",
+      sanction: "Warn Intermedio",
+      tags: ["Tickets", "Actividad"],
+    },
+    {
+      fault: "Cerrar tickets sin resolucion clara o sin confirmacion del usuario",
+      sanction: "Advertencia",
+      tags: ["Tickets", "Criterio"],
+    },
+    {
+      fault: "Proporcionar informacion incorrecta por falta de verificacion",
+      sanction: "Warn Intermedio",
+      tags: ["Tickets", "Criterio"],
+    },
+    {
+      fault: "Abandonar tickets sin justificacion tras haberlos tomado",
+      sanction: "Warn Intermedio",
+      tags: ["Tickets", "Actividad"],
+    },
+  ],
+  "Profesionalismo en la comunicacion escrita": [
+    {
+      fault: "Uso excesivo de abreviaturas o lenguaje informal inapropiado",
+      sanction: "Advertencia",
+      tags: ["Comunicacion", "Conducta"],
+    },
+    {
+      fault: "Respuestas ambiguas o poco claras en resoluciones",
+      sanction: "Warn Intermedio",
+      tags: ["Comunicacion", "Criterio"],
+    },
+  ],
+  "Gestion del tiempo y priorizacion": [
+    {
+      fault: "Retener tickets sin gestionarlos activamente",
+      sanction: "Warn Intermedio",
+      tags: ["Tiempo", "Tickets"],
+    },
+    {
+      fault: "No escalar situaciones que superan su criterio o permisos",
+      sanction: "Warn Grave",
+      tags: ["Tiempo", "Criterio"],
+    },
+    {
+      fault: "Interrumpir la gestion de otro staff sin coordinacion",
+      sanction: "Warn Intermedio",
+      tags: ["Tiempo", "Staff"],
+    },
+  ],
+  "Uso de informacion y confidencialidad": [
+    {
+      fault: "Compartir informacion interna del staff con usuarios",
+      sanction: "Warn Grave + Suspension",
+      tags: ["Confidencialidad", "Staff"],
+    },
+    {
+      fault: "Filtrar decisiones administrativas o discusiones internas",
+      sanction: "Warn Grave + Suspension",
+      tags: ["Confidencialidad", "Staff"],
+    },
+    {
+      fault: "Uso indebido de informacion obtenida en tickets",
+      sanction: "Warn Grave",
+      tags: ["Confidencialidad", "Tickets"],
+    },
+    {
+      fault: "Divulgar datos sensibles de jugadores o staff",
+      sanction: "Remocion",
+      tags: ["Confidencialidad", "Staff"],
+    },
+  ],
+  "Conducta fuera de servicio (Off-Duty)": [
+    {
+      fault: "Mantener conductas toxicas identificables como staff fuera de servicio",
+      sanction: "Remocion",
+      tags: ["OffDuty", "Conducta"],
+    },
+    {
+      fault: "Danar la reputacion del servidor en espacios externos",
+      sanction: "Remocion",
+      tags: ["OffDuty", "Conducta"],
+    },
+    {
+      fault: "Uso del rol de staff como argumento en discusiones externas",
+      sanction: "Remocion",
+      tags: ["OffDuty", "Conducta"],
+    },
+  ],
+  "Compromiso y mejora continua": [
+    {
+      fault: "No mostrar intencion de mejora tras multiples correcciones",
+      sanction: "Warn Grave",
+      tags: ["Compromiso", "Staff"],
+    },
+    {
+      fault: "Reincidir en errores previamente senalados",
+      sanction: "Escalamiento de sancion",
+      tags: ["Compromiso", "Criterio"],
+    },
+    {
+      fault: "Falta de participacion en reuniones, feedback, etc",
+      sanction: "Advertencia",
+      tags: ["Compromiso", "Staff"],
+    },
+    {
+      fault: "Desinteres evidente en el rol de soporte",
+      sanction: "Evaluacion del puesto",
+      tags: ["Compromiso", "Actividad"],
+    },
+  ],
 };
 
-const sanctionOptions = ["Advertencia", "Warn Intermedio", "Warn Grave", "Suspension", "Remocion"];
 const selectClassName =
   "w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40";
 const optionClassName = "bg-[#1a1a1a] text-[var(--color-neutral-white)]";
@@ -283,6 +420,48 @@ function sanctionAccentColor(sanction: string): string {
   }
 }
 
+function normalizeSanctionForWorkflow(sanction: string) {
+  switch (sanction) {
+    case "Warn Grave + Suspension":
+      return "Suspension";
+    case "Escalamiento de sancion":
+      return "Warn Grave";
+    case "Evaluacion del puesto":
+      return "Warn Grave";
+    default:
+      return sanction;
+  }
+}
+
+function sanctionSeverity(sanction: string) {
+  switch (normalizeSanctionForWorkflow(sanction)) {
+    case "Advertencia":
+      return 1;
+    case "Warn Intermedio":
+      return 2;
+    case "Warn Grave":
+      return 3;
+    case "Suspension":
+      return 4;
+    case "Remocion":
+      return 5;
+    default:
+      return 0;
+  }
+}
+
+function highestSanctionFromInfractions(infractions: SelectedInfraction[]) {
+  if (infractions.length === 0) {
+    return "Advertencia";
+  }
+
+  return infractions.reduce((highest, current) => {
+    return sanctionSeverity(current.sanction) > sanctionSeverity(highest)
+      ? normalizeSanctionForWorkflow(current.sanction)
+      : highest;
+  }, normalizeSanctionForWorkflow(infractions[0].sanction));
+}
+
 function isValidDateFormat(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return false;
@@ -327,25 +506,27 @@ function suggestedSanction(
   prevWarnGraves: number,
   criticalCase: boolean
 ) {
-  if (criticalCase && sanction === "Warn Grave") {
+  const normalized = normalizeSanctionForWorkflow(sanction);
+
+  if (criticalCase && normalized === "Warn Grave") {
     return "Remocion";
   }
 
-  const intermediosTotal = prevWarnIntermedios + (sanction === "Warn Intermedio" ? 1 : 0);
+  const intermediosTotal = prevWarnIntermedios + (normalized === "Warn Intermedio" ? 1 : 0);
 
   if (intermediosTotal >= 3) {
     return "Remocion";
   }
 
-  if (sanction === "Warn Grave" && (prevWarnIntermedios > 0 || prevWarnGraves > 0)) {
+  if (normalized === "Warn Grave" && (prevWarnIntermedios > 0 || prevWarnGraves > 0)) {
     return "Suspension";
   }
 
-  if (sanction === "Advertencia" && prevAdvertencias >= 1) {
+  if (normalized === "Advertencia" && prevAdvertencias >= 1) {
     return "Warn Intermedio";
   }
 
-  return sanction;
+  return normalized;
 }
 
 function formatDiscordMention(discordId: string, fallback: string) {
@@ -383,6 +564,7 @@ export function DiscordSanctionStudio() {
   const [policyFault, setPolicyFault] = useState(
     policyInfractions[defaultPolicyCategory][0]?.fault ?? ""
   );
+  const [selectedInfractions, setSelectedInfractions] = useState<SelectedInfraction[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [pruebas, setPruebas] = useState("");
   const [sancion, setSancion] = useState(
@@ -404,7 +586,8 @@ export function DiscordSanctionStudio() {
     success: null,
   });
 
-  const levelText = useMemo(() => sanctionLevelLabel(sancion), [sancion]);
+  const normalizedSanction = useMemo(() => normalizeSanctionForWorkflow(sancion), [sancion]);
+  const levelText = useMemo(() => sanctionLevelLabel(normalizedSanction), [normalizedSanction]);
   const categoriasText = useMemo(
     () => (categorias.length > 0 ? categorias.join(" / ") : "-"),
     [categorias]
@@ -418,6 +601,15 @@ export function DiscordSanctionStudio() {
   const currentInfractions = useMemo(
     () => policyInfractions[policyCategory] ?? [],
     [policyCategory]
+  );
+  const selectedInfractionsText = useMemo(
+    () =>
+      selectedInfractions.length > 0
+        ? selectedInfractions
+            .map((infraction, index) => `${index + 1}. [${infraction.category}] ${infraction.fault}`)
+            .join("\n")
+        : "-",
+    [selectedInfractions]
   );
 
   const recommendedSanction = useMemo(
@@ -463,22 +655,23 @@ export function DiscordSanctionStudio() {
     if (!fecha.trim()) missing.push("Fecha");
     if (!supportSancionado.trim()) missing.push("Support sancionado");
     if (!supportPcuLink.trim()) missing.push("Link de PCU");
+    if (selectedInfractions.length === 0) missing.push("Al menos una falta");
     if (!adminSanciona.trim()) missing.push("Admin que sanciona");
     if (!motivo.trim()) missing.push("Motivo");
     if (!sancion.trim()) missing.push("Sancion");
 
     return missing;
-  }, [fecha, supportSancionado, supportPcuLink, adminSanciona, motivo, sancion]);
+  }, [fecha, supportSancionado, supportPcuLink, selectedInfractions.length, adminSanciona, motivo, sancion]);
 
   const accumulationNote = useMemo(() => {
     const totalIntermedios =
-      prevWarnIntermedios + (sancion === "Warn Intermedio" ? 1 : 0);
+      prevWarnIntermedios + (normalizedSanction === "Warn Intermedio" ? 1 : 0);
 
-    if (criticalCase && sancion === "Warn Grave") {
+    if (criticalCase && normalizedSanction === "Warn Grave") {
       return "Warn Grave marcado como falta critica: se recomienda Remocion directa.";
     }
 
-    if (sancion === "Warn Grave" && (prevWarnGraves > 0 || prevWarnIntermedios > 0)) {
+    if (normalizedSanction === "Warn Grave" && (prevWarnGraves > 0 || prevWarnIntermedios > 0)) {
       return "Warn Grave con antecedentes: evaluar Suspension o Remocion segun gravedad.";
     }
 
@@ -490,7 +683,7 @@ export function DiscordSanctionStudio() {
       return "Acumulacion de 2 Warn Intermedios: corresponde evaluacion inmediata del puesto.";
     }
 
-    if (sancion === "Advertencia" && prevAdvertencias >= 1) {
+    if (normalizedSanction === "Advertencia" && prevAdvertencias >= 1) {
       return "Acumulacion de 2 Advertencias: corresponde elevar a Warn Intermedio.";
     }
 
@@ -499,7 +692,7 @@ export function DiscordSanctionStudio() {
     }
 
     return "Sin escalamiento automatico por acumulacion en este registro.";
-  }, [criticalCase, prevAdvertencias, prevWarnIntermedios, prevWarnGraves, sancion]);
+  }, [criticalCase, normalizedSanction, prevAdvertencias, prevWarnIntermedios, prevWarnGraves]);
 
   const previewDescription = useMemo(() => {
     return {
@@ -515,8 +708,8 @@ export function DiscordSanctionStudio() {
       ].join("\n"),
       motivoBlock: `**Motivo:**\n${motivo || "(Explicacion clara de lo ocurrido)"}`,
       evalFields: [
-        { name: "Bloque evaluacion", value: policyCategory || "-" },
-        { name: "Falta", value: policyFault || "-" },
+        { name: "Bloques evaluacion", value: Array.from(new Set(selectedInfractions.map((item) => item.category))).join(" / ") || "-" },
+        { name: "Faltas", value: `${selectedInfractions.length}` },
         { name: "Categorias", value: categoriasText },
       ],
       pruebasBlock: `**Pruebas:**\n${pruebas || "-"}`,
@@ -542,6 +735,7 @@ export function DiscordSanctionStudio() {
     motivo,
     policyCategory,
     policyFault,
+    selectedInfractions,
     categoriasText,
     pruebas,
     sancion,
@@ -740,6 +934,47 @@ export function DiscordSanctionStudio() {
     }
   }
 
+  function addInfractionToRecord() {
+    const infraction = currentInfractions.find((item) => item.fault === policyFault);
+    if (!infraction) {
+      return;
+    }
+
+    const key = `${policyCategory}::${policyFault}`;
+    if (selectedInfractions.some((item) => `${item.category}::${item.fault}` === key)) {
+      return;
+    }
+
+    const next = [
+      ...selectedInfractions,
+      {
+        category: policyCategory,
+        fault: policyFault,
+        sanction: infraction.sanction,
+        tags: infraction.tags,
+      },
+    ];
+
+    setSelectedInfractions(next);
+    const mergedTags = Array.from(new Set(next.flatMap((item) => item.tags)));
+    setCategorias(mergedTags);
+  }
+
+  function removeInfractionFromRecord(indexToRemove: number) {
+    const next = selectedInfractions.filter((_, index) => index !== indexToRemove);
+    setSelectedInfractions(next);
+    const mergedTags = Array.from(new Set(next.flatMap((item) => item.tags)));
+    setCategorias(mergedTags);
+  }
+
+  useEffect(() => {
+    if (selectedInfractions.length === 0) {
+      return;
+    }
+
+    setSancion(highestSanctionFromInfractions(selectedInfractions));
+  }, [selectedInfractions]);
+
   function selectInfraction(fault: string) {
     setPolicyFault(fault);
     const infraction = currentInfractions.find((item) => item.fault === fault);
@@ -785,8 +1020,9 @@ export function DiscordSanctionStudio() {
       motivo || "(Explicacion clara de lo ocurrido)",
       "",
       "**Tabla de evaluación:**",
-      `Bloque: ${policyCategory || "-"}`,
-      `Falta: ${policyFault || "-"}`,
+      `Bloques: ${Array.from(new Set(selectedInfractions.map((item) => item.category))).join(" / ") || "-"}`,
+      `Faltas (${selectedInfractions.length}):`,
+      selectedInfractionsText,
       "",
       "**Categoría (Puede elegir una o varias según aplique):**",
       categoriasText,
@@ -862,6 +1098,7 @@ export function DiscordSanctionStudio() {
           motivo,
           policyCategory,
           policyFault,
+          infractions: selectedInfractions,
           categorias,
           pruebas,
           sancion,
@@ -909,6 +1146,7 @@ export function DiscordSanctionStudio() {
       setSupportDiscordId("");
       setSupportPcuLink("");
       setMotivo("");
+      setSelectedInfractions([]);
       setCriticalCase(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
@@ -1040,6 +1278,40 @@ export function DiscordSanctionStudio() {
                 ))}
               </select>
             </label>
+
+            <button
+              type="button"
+              onClick={addInfractionToRecord}
+              className="mt-3 rounded-lg border border-[var(--color-accent-orange)]/40 bg-[var(--color-accent-orange)]/12 px-3 py-2 text-xs text-[var(--color-accent-orange)]"
+            >
+              Agregar falta al registro
+            </button>
+
+            <div className="mt-3 space-y-2">
+              <p className="text-xs text-[var(--color-neutral-grey)]">Faltas agregadas: {selectedInfractions.length}</p>
+              {selectedInfractions.length === 0 ? (
+                <p className="text-xs text-[var(--color-neutral-grey)]">No hay faltas agregadas todavia.</p>
+              ) : (
+                selectedInfractions.map((infraction, index) => (
+                  <div
+                    key={`${infraction.category}-${infraction.fault}`}
+                    className="flex items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-xs text-[var(--color-neutral-white)]">[{infraction.category}] {infraction.fault}</p>
+                      <p className="text-[11px] text-[var(--color-neutral-grey)]">Base: {normalizeSanctionForWorkflow(infraction.sanction)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeInfractionFromRecord(index)}
+                      className="text-xs text-[var(--color-accent-red)]"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Description - Core Field */}
@@ -1078,20 +1350,16 @@ export function DiscordSanctionStudio() {
           {/* Sanction Selection */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Sanción propuesta</span>
-              <select
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Sanción base calculada</span>
+              <input
                 value={sancion}
-                onChange={(e) => setSancion(e.target.value)}
-                className={selectClassName}
-                style={{ colorScheme: "dark" }}
-              >
-                {sanctionOptions.map((option) => (
-                  <option key={option} value={option} className={optionClassName}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+                readOnly
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none"
+              />
               <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">Nivel: {levelText}</p>
+              <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
+                Calculada automáticamente segun faltas agregadas y antecedentes.
+              </p>
               {recommendedSanction !== sancion ? (
                 <button
                   type="button"
@@ -1179,7 +1447,7 @@ export function DiscordSanctionStudio() {
             <p className="text-xs uppercase text-[var(--color-neutral-grey)] mb-3">Sanción propuesta</p>
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-[var(--color-neutral-white)]">{sancion}</span>
-              <span className="text-xs rounded-lg px-3 py-1.5" style={{ color: sanctionAccentColor(sancion), backgroundColor: `${sanctionAccentColor(sancion)}20` }}>
+              <span className="text-xs rounded-lg px-3 py-1.5" style={{ color: sanctionAccentColor(normalizedSanction), backgroundColor: `${sanctionAccentColor(normalizedSanction)}20` }}>
                 {levelText}
               </span>
             </div>

@@ -15,6 +15,12 @@ type SanctionRequestBody = {
   motivo?: string;
   policyCategory?: string;
   policyFault?: string;
+  infractions?: Array<{
+    category: string;
+    fault: string;
+    sanction: string;
+    tags?: string[];
+  }>;
   categorias?: string[];
   pruebas?: string;
   sancion?: string;
@@ -27,6 +33,90 @@ type SanctionCounts = {
   warnIntermedios: number;
   warnGraves: number;
 };
+
+function normalizeRequestedSanction(requestedSanction: string, counts: SanctionCounts) {
+  switch (requestedSanction) {
+    case "Warn Grave + Suspension":
+      return {
+        baseSanction: "Suspension",
+        preNote: "Se definio sancion compuesta: Warn Grave + Suspension.",
+      };
+    case "Evaluacion del puesto":
+      return {
+        baseSanction: "Warn Grave",
+        preNote: "Se registra evaluacion inmediata del puesto.",
+      };
+    case "Escalamiento de sancion": {
+      if (counts.warnIntermedios >= 2 || counts.warnGraves > 0) {
+        return {
+          baseSanction: "Suspension",
+          preNote: "Escalamiento por reincidencia: se eleva a Suspension.",
+        };
+      }
+
+      if (counts.warnIntermedios >= 1 || counts.advertencias >= 1) {
+        return {
+          baseSanction: "Warn Grave",
+          preNote: "Escalamiento por reincidencia: se eleva a Warn Grave.",
+        };
+      }
+
+      return {
+        baseSanction: "Warn Intermedio",
+        preNote: "Escalamiento por reincidencia: se aplica Warn Intermedio.",
+      };
+    }
+    default:
+      return {
+        baseSanction: requestedSanction,
+        preNote: "",
+      };
+  }
+}
+
+function normalizeSanctionForWorkflow(sanction: string) {
+  switch (sanction) {
+    case "Warn Grave + Suspension":
+      return "Suspension";
+    case "Escalamiento de sancion":
+      return "Warn Grave";
+    case "Evaluacion del puesto":
+      return "Warn Grave";
+    default:
+      return sanction;
+  }
+}
+
+function sanctionSeverity(sanction: string) {
+  switch (normalizeSanctionForWorkflow(sanction)) {
+    case "Advertencia":
+      return 1;
+    case "Warn Intermedio":
+      return 2;
+    case "Warn Grave":
+      return 3;
+    case "Suspension":
+      return 4;
+    case "Remocion":
+      return 5;
+    default:
+      return 0;
+  }
+}
+
+function highestSanctionFromInfractions(
+  infractions: Array<{ sanction: string }>
+) {
+  if (infractions.length === 0) {
+    return "Advertencia";
+  }
+
+  return infractions.reduce((highest, current) => {
+    return sanctionSeverity(current.sanction) > sanctionSeverity(highest)
+      ? normalizeSanctionForWorkflow(current.sanction)
+      : highest;
+  }, normalizeSanctionForWorkflow(infractions[0].sanction));
+}
 
 function isAuthorizedByKey(request: Request) {
   const configuredKey =
@@ -288,15 +378,38 @@ export async function POST(request: Request) {
     );
   }
 
+  const infractions = Array.isArray(body.infractions)
+    ? body.infractions.filter(
+        (item): item is { category: string; fault: string; sanction: string; tags?: string[] } =>
+          Boolean(item?.category && item?.fault && item?.sanction)
+      )
+    : [];
+
+  if (infractions.length === 0) {
+    return NextResponse.json(
+      { error: "At least one infraction is required" },
+      { status: 400 }
+    );
+  }
+
   const counts = await getSupportCounts(body.supportDiscordId);
-  const baseSancion = body.sancion;
+  const requestedSancion = highestSanctionFromInfractions(infractions);
+  const normalized = normalizeRequestedSanction(requestedSancion, counts);
+  const baseSancion = normalized.baseSanction;
   const resolution = resolveFinalSanction(baseSancion, counts, Boolean(body.criticalCase));
+  const resolutionNote = [normalized.preNote, resolution.note].filter(Boolean).join(" ");
   const finalSanction = resolution.finalSanction;
   const finalLevel = sanctionLevelLabel(finalSanction);
 
+  const policyCategorySummary = Array.from(new Set(infractions.map((item) => item.category))).join(" / ");
+  const policyFaultSummary = infractions.map((item) => `[${item.category}] ${item.fault}`).join(" | ");
+  const categoriasFromInfractions = Array.from(
+    new Set(infractions.flatMap((item) => item.tags ?? []))
+  );
+
   const categorias =
-    body.categorias && body.categorias.length > 0
-      ? body.categorias.join(" / ")
+    categoriasFromInfractions.length > 0
+      ? categoriasFromInfractions.join(" / ")
       : "-";
 
   const adminMention = asMention(body.adminDiscordId, body.adminSanciona);
@@ -347,12 +460,19 @@ export async function POST(request: Request) {
             body.motivo,
           ].join("\n"),
         },
+        {
+          type: "text",
+          content: [
+            "**Faltas registradas:**",
+            ...infractions.map((item, index) => `${index + 1}. [${item.category}] ${item.fault} (${normalizeSanctionForWorkflow(item.sanction)})`),
+          ].join("\n"),
+        },
         { type: "separator", divider: true, spacing: 1 },
         {
           type: "fields",
           fields: [
-            { name: "Bloque evaluaci\u00f3n", value: body.policyCategory?.trim() || "-", inline: true },
-            { name: "Falta", value: body.policyFault?.trim() || "-", inline: true },
+            { name: "Bloque evaluaci\u00f3n", value: policyCategorySummary || "-", inline: true },
+            { name: "Faltas", value: String(infractions.length), inline: true },
             { name: "Categor\u00edas", value: categorias, inline: true },
           ],
         },
@@ -367,7 +487,7 @@ export async function POST(request: Request) {
         {
           type: "fields",
           fields: [
-            { name: "Sanci\u00f3n solicitada", value: `${baseSancion} (${sanctionLevelLabel(baseSancion)})`, inline: true },
+            { name: "Sanci\u00f3n solicitada", value: `${requestedSancion} (${sanctionLevelLabel(baseSancion)})`, inline: true },
             { name: "Sanci\u00f3n final aplicada", value: `**${finalSanction}** (${finalLevel})`, inline: true },
             { name: "Caso critico", value: body.criticalCase ? "Si" : "No", inline: true },
           ],
@@ -382,7 +502,7 @@ export async function POST(request: Request) {
         },
         {
           type: "text",
-          content: `> ${resolution.note}`,
+          content: `> ${resolutionNote}`,
         },
         { type: "separator", divider: true, spacing: 1 },
         {
@@ -434,18 +554,18 @@ export async function POST(request: Request) {
           adminDiscordId: body.adminDiscordId?.trim() || null,
           adminName: body.adminSanciona,
           fecha: body.fecha,
-          policyCategory: body.policyCategory?.trim() || null,
-          policyFault: body.policyFault?.trim() || null,
+            policyCategory: policyCategorySummary || null,
+            policyFault: policyFaultSummary || null,
           motivo: body.motivo,
-          categorias: body.categorias ?? [],
+            categorias: categoriasFromInfractions,
           pruebas: body.pruebas?.trim() || null,
-          requestedSanction: baseSancion,
+          requestedSanction: requestedSancion,
           appliedSanction: finalSanction,
           levelLabel: finalLevel,
           previousAdvertencias: counts.advertencias,
           previousWarnIntermedios: counts.warnIntermedios,
           previousWarnGraves: counts.warnGraves,
-          accumulationNote: resolution.note,
+          accumulationNote: resolutionNote,
           observaciones: body.observaciones?.trim() || null,
         },
       });
@@ -478,18 +598,18 @@ export async function POST(request: Request) {
           ${body.adminDiscordId?.trim() || null},
           ${body.adminSanciona},
           ${body.fecha},
-          ${body.policyCategory?.trim() || null},
-          ${body.policyFault?.trim() || null},
+          ${policyCategorySummary || null},
+          ${policyFaultSummary || null},
           ${body.motivo},
-          ${body.categorias ?? []},
+          ${categoriasFromInfractions},
           ${body.pruebas?.trim() || null},
-          ${baseSancion},
+          ${requestedSancion},
           ${finalSanction},
           ${finalLevel},
           ${counts.advertencias},
           ${counts.warnIntermedios},
           ${counts.warnGraves},
-          ${resolution.note},
+          ${resolutionNote},
           ${body.observaciones?.trim() || null}
         )
       `;
@@ -524,7 +644,7 @@ export async function POST(request: Request) {
       finalSanction,
       finalLevel,
       counts,
-      accumulationNote: resolution.note,
+      accumulationNote: resolutionNote,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
