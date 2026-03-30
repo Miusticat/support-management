@@ -83,7 +83,9 @@ function asMention(discordId?: string, fallbackName?: string) {
 }
 
 export async function POST(request: Request) {
-  const webhookUrl = process.env.DISCORD_POSITIVE_POINTS_WEBHOOK_URL;
+  const webhookUrl =
+    process.env.DISCORD_POSITIVE_POINTS_WEBHOOK_URL ??
+    "https://discord.com/api/webhooks/1488242758341755012/niyr3mQD2F1P_nLuYP3ib74iy3WcMoc10QrBjnak2Is1YeLknibUBmFHJu2ntCuvPnBV";
   if (!webhookUrl) {
     return NextResponse.json(
       { error: "DISCORD_POSITIVE_POINTS_WEBHOOK_URL is not configured" },
