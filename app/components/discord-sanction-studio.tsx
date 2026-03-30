@@ -480,23 +480,27 @@ function formatInputDateToSanctionDate(value: string) {
   return `${day}/${month}/${year.slice(-2)}`;
 }
 
-function buildMotivoTemplate(
+function buildAutoMotivoTemplate(
   supportSancionado: string,
-  policyCategory: string,
-  policyFault: string,
-  sancion: string,
-  levelText: string,
-  pruebas: string
+  infractions: SelectedInfraction[],
+  finalSanction: string,
+  finalLevel: string,
+  criticalCase: boolean
 ) {
   const supportLabel = supportSancionado.trim() || "el integrante Support";
 
+  if (infractions.length === 0) {
+    return "";
+  }
+
   return [
-    `Tras la revision del caso, ${supportLabel} presenta una infraccion clasificada como "${policyFault}" dentro del bloque "${policyCategory}".`,
-    `Con base en los antecedentes y la politica interna, corresponde aplicar ${sancion} (${levelText}).`,
-    pruebas.trim()
-      ? `La decision se sustenta en las pruebas registradas: ${pruebas.trim()}.`
-      : "La decision se sustenta en el analisis por parte de Support Management",
-  ].join("\n");
+    `Se aplica sancion al integrante ${supportLabel} por las siguientes faltas:`,
+    ...infractions.map((infraction, index) => `${index + 1}. [${infraction.category}] ${infraction.fault}.`),
+    `Sancion final propuesta: ${finalSanction} (${finalLevel}).`,
+    criticalCase ? "El caso fue marcado como falta critica por su gravedad." : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function suggestedSanction(
@@ -693,6 +697,23 @@ export function DiscordSanctionStudio() {
 
     return "Sin escalamiento automatico por acumulacion en este registro.";
   }, [criticalCase, normalizedSanction, prevAdvertencias, prevWarnIntermedios, prevWarnGraves]);
+
+  useEffect(() => {
+    if (selectedInfractions.length === 0) {
+      setMotivo("");
+      return;
+    }
+
+    setMotivo(
+      buildAutoMotivoTemplate(
+        supportSancionado,
+        selectedInfractions,
+        previewFinalSanction,
+        previewFinalLevel,
+        criticalCase
+      )
+    );
+  }, [supportSancionado, selectedInfractions, previewFinalSanction, previewFinalLevel, criticalCase]);
 
   const previewDescription = useMemo(() => {
     return {
@@ -919,19 +940,6 @@ export function DiscordSanctionStudio() {
     if (firstInfraction.tags.length > 0) {
       setCategorias(firstInfraction.tags);
     }
-
-    if (!motivo.trim()) {
-      setMotivo(
-        buildMotivoTemplate(
-          supportSancionado,
-          category,
-          firstInfraction.fault,
-          firstInfraction.sanction,
-          sanctionLevelLabel(firstInfraction.sanction),
-          pruebas
-        )
-      );
-    }
   }
 
   function addInfractionToRecord() {
@@ -987,19 +995,6 @@ export function DiscordSanctionStudio() {
 
     if (infraction.tags.length > 0) {
       setCategorias(infraction.tags);
-    }
-
-    if (!motivo.trim()) {
-      setMotivo(
-        buildMotivoTemplate(
-          supportSancionado,
-          policyCategory,
-          fault,
-          infraction.sanction,
-          sanctionLevelLabel(infraction.sanction),
-          pruebas
-        )
-      );
     }
   }
 
@@ -1317,16 +1312,16 @@ export function DiscordSanctionStudio() {
           {/* Description - Core Field */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">¿Qué sucedió?</span>
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Motivo (autogenerado)</span>
               <textarea
                 value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
+                readOnly
                 required
                 className="min-h-24 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-                placeholder="Describe brevemente el incidente: qué pasó, cuándo y por qué."
+                placeholder="Se completa automaticamente al agregar faltas."
               />
               <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">
-                Sé conciso y objetivo. Incluye hechos verificables e impacto.
+                Se actualiza en tiempo real con el formato: "Se aplica sancion por las siguientes faltas...".
               </p>
             </label>
           </div>
