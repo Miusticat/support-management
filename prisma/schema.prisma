@@ -91,3 +91,24 @@ model StaffSanction {
   @@index([supportDiscordId])
   @@index([createdAt])
 }
+
+model StaffPositivePoints {
+  id                    String   @id @default(cuid())
+  supportDiscordId       String
+  supportName            String
+  supportPcuLink         String?
+  adminDiscordId         String?
+  adminName              String
+  fecha                  String
+  pointType              String
+  pointValue             Float
+  justificacion          String
+  evidencia              String?
+  categorias             String[]
+  observaciones          String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([supportDiscordId])
+  @@index([createdAt])
+}

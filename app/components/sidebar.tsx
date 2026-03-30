@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LayoutDashboard, Megaphone, ClipboardCheck, AlertTriangle, ScrollText, UsersRound, LogOut, Shield, UserCircle2 } from "lucide-react";
+import { LayoutDashboard, Megaphone, ClipboardCheck, AlertTriangle, ScrollText, UsersRound, LogOut, Shield, UserCircle2, Award } from "lucide-react";
 
 type NavItem = {
   label: string;
@@ -31,6 +31,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Anuncios", icon: Megaphone, href: "/discord" },
       { label: "Registrar sanciones", icon: AlertTriangle, href: "/discord/registrar-sancion" },
+      { label: "Puntos positivos", icon: Award, href: "/discord/puntos-positivos" },
       { label: "Historial de sanciones", icon: ScrollText, href: "/discord/historial-sanciones" },
     ],
   },
@@ -85,7 +86,7 @@ function canSeeItem(item: NavItem, canAccessSupports: boolean, canAccessSanction
   if (item.href === "/supports") {
     return canAccessSupports;
   }
-  if (["/discord/evaluacion-ascenso", "/discord/registrar-sancion", "/discord/historial-sanciones"].includes(item.href)) {
+  if (["/discord/evaluacion-ascenso", "/discord/registrar-sancion", "/discord/puntos-positivos", "/discord/historial-sanciones"].includes(item.href)) {
     return canAccessSanctions;
   }
   if (item.href === "/discord/admin") {
