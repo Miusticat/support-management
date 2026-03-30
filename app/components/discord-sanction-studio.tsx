@@ -123,10 +123,10 @@ const optionClassName = "bg-[#1a1a1a] text-[var(--color-neutral-white)]";
 
 function todayAsSanctionDate() {
   const date = new Date();
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = String(date.getFullYear()).slice(-2);
-  return `${day}/${month}/${year}`;
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function sanctionLevelLabel(sanction: string) {
@@ -164,12 +164,21 @@ function sanctionAccentColor(sanction: string): string {
 }
 
 function isValidDateFormat(value: string) {
-  if (!/^\d{2}\/\d{2}\/\d{2}$/.test(value)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return false;
   }
 
-  const [day, month] = value.split("/").map(Number);
-  return day >= 1 && day <= 31 && month >= 1 && month <= 12;
+  const parsed = new Date(`${value}T00:00:00`);
+  return !Number.isNaN(parsed.getTime());
+}
+
+function formatInputDateToSanctionDate(value: string) {
+  if (!isValidDateFormat(value)) {
+    return value;
+  }
+
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year.slice(-2)}`;
 }
 
 function buildMotivoTemplate(
@@ -187,7 +196,7 @@ function buildMotivoTemplate(
     `Con base en los antecedentes y la politica interna, corresponde aplicar ${sancion} (${levelText}).`,
     pruebas.trim()
       ? `La decision se sustenta en las pruebas registradas: ${pruebas.trim()}.`
-      : "La decision se sustenta en el analisis de conducta y contexto operativo del caso.",
+      : "La decision se sustenta en el analisis por parte de Support Management",
   ].join("\n");
 }
 
@@ -276,7 +285,7 @@ export function DiscordSanctionStudio() {
   );
   const dateIsValid = useMemo(() => isValidDateFormat(fecha), [fecha]);
   const pcuLinkIsValid = useMemo(
-    () => !supportPcuLink.trim() || /^https?:\/\//i.test(supportPcuLink.trim()),
+    () => /^https?:\/\//i.test(supportPcuLink.trim()),
     [supportPcuLink]
   );
 
@@ -327,6 +336,7 @@ export function DiscordSanctionStudio() {
 
     if (!fecha.trim()) missing.push("Fecha");
     if (!supportSancionado.trim()) missing.push("Support sancionado");
+    if (!supportPcuLink.trim()) missing.push("Link de PCU");
     if (!adminSanciona.trim()) missing.push("Admin que sanciona");
     if (!motivo.trim()) missing.push("Motivo");
     if (!sancion.trim()) missing.push("Sancion");
@@ -360,7 +370,7 @@ export function DiscordSanctionStudio() {
   const previewDescription = useMemo(() => {
     return {
       adminBlock: [
-        `### Fecha:\n${fecha || "(DD/MM/AA)"}`,
+        `### Fecha:\n${formatInputDateToSanctionDate(fecha) || "(DD/MM/AA)"}`,
         `### Datos del Admin que sanciona:`,
         `* Trainer/Admin que sanciona: ${adminMentionPreview} (${adminSanciona || "-"})`,
       ].join("\n"),
@@ -566,14 +576,6 @@ export function DiscordSanctionStudio() {
     };
   }, [supportDiscordId]);
 
-  function toggleCategory(category: string) {
-    setCategorias((prev) =>
-      prev.includes(category)
-        ? prev.filter((item) => item !== category)
-        : [...prev, category]
-    );
-  }
-
   function selectPolicyCategory(category: string) {
     setPolicyCategory(category);
     const firstInfraction = policyInfractions[category]?.[0];
@@ -604,42 +606,11 @@ export function DiscordSanctionStudio() {
     }
   }
 
-  function selectInfraction(fault: string) {
-    setPolicyFault(fault);
-    const infraction = currentInfractions.find((item) => item.fault === fault);
-
-    if (!infraction) {
-      return;
-    }
-
-    setSancion(infraction.sanction);
-
-    if (infraction.tags.length > 0) {
-      setCategorias((prev) => {
-        const merged = new Set([...prev, ...infraction.tags]);
-        return Array.from(merged);
-      });
-    }
-
-    if (!motivo.trim()) {
-      setMotivo(
-        buildMotivoTemplate(
-          supportSancionado,
-          policyCategory,
-          fault,
-          infraction.sanction,
-          sanctionLevelLabel(infraction.sanction),
-          pruebas
-        )
-      );
-    }
-  }
-
   async function copyPreview() {
     const previewText = [
       "## Registro de sanción:",
       "### Fecha:",
-      fecha || "(DD/MM/AA)",
+      formatInputDateToSanctionDate(fecha) || "(DD/MM/AA)",
       "",
       "### Administrador que sanciona:",
       `* Administrador que sanciona: ${adminSanciona || "-"}`,
@@ -719,7 +690,7 @@ export function DiscordSanctionStudio() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fecha,
+          fecha: formatInputDateToSanctionDate(fecha),
           supportSancionado,
           supportDiscordId,
           supportPcuLink: supportPcuLink.trim(),
@@ -797,6 +768,22 @@ export function DiscordSanctionStudio() {
         </div>
 
         <form onSubmit={publishSanction} className="space-y-5">
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Fecha</span>
+              <input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                required
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+              />
+              {!dateIsValid ? (
+                <p className="mt-1 text-xs text-[var(--color-accent-red)]">Selecciona una fecha valida.</p>
+              ) : null}
+            </label>
+          </div>
+
           {/* Support Selection - Primary Section */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
             <label className="block">
@@ -833,6 +820,22 @@ export function DiscordSanctionStudio() {
                 <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">
                   No se encontraron miembros con rol Support.
                 </p>
+              ) : null}
+            </label>
+          </div>
+
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Link de PCU</span>
+              <input
+                value={supportPcuLink}
+                onChange={(e) => setSupportPcuLink(e.target.value)}
+                required
+                className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
+                placeholder="https://pcu-es.gta.world/view/user/xxxx"
+              />
+              {!pcuLinkIsValid ? (
+                <p className="mt-1 text-xs text-[var(--color-accent-red)]">Debe empezar con http:// o https://</p>
               ) : null}
             </label>
           </div>
@@ -912,127 +915,11 @@ export function DiscordSanctionStudio() {
                   onClick={() => setSancion(recommendedSanction)}
                   className="mt-2 rounded-lg border border-[var(--color-accent-orange)]/40 bg-[var(--color-accent-orange)]/12 px-3 py-2 text-xs text-[var(--color-accent-orange)]"
                 >
-                  💡 Sugerencia: {recommendedSanction}
+                  Sugerencia: {recommendedSanction}
                 </button>
               ) : null}
             </label>
           </div>
-
-          {/* Accumulated History - Auto-loaded */}
-          {supportDiscordId && (
-            <div className="rounded-xl border border-[var(--color-accent-orange)]/20 bg-[var(--color-accent-orange)]/8 p-5">
-              <p className="mb-3 text-xs font-medium text-[var(--color-accent-orange)]">Antecedentes detectados</p>
-              {historyLoading ? (
-                <p className="text-xs text-[var(--color-neutral-grey)]">Cargando...</p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-center">
-                    <p className="text-xs text-[var(--color-neutral-grey)]">Advertencias</p>
-                    <p className="text-lg font-bold text-[var(--color-neutral-white)]">{prevAdvertencias}</p>
-                  </div>
-                  <div className="rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-center">
-                    <p className="text-xs text-[var(--color-neutral-grey)]">Warns int.</p>
-                    <p className="text-lg font-bold text-[var(--color-neutral-white)]">{prevWarnIntermedios}</p>
-                  </div>
-                  <div className="rounded border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-center">
-                    <p className="text-xs text-[var(--color-neutral-grey)]">Warns grav.</p>
-                    <p className="text-lg font-bold text-[var(--color-neutral-white)]">{prevWarnGraves}</p>
-                  </div>
-                </div>
-              )}
-              {accumulationNote && (
-                <p className="mt-3 text-xs italic text-[var(--color-accent-orange)]">{accumulationNote}</p>
-              )}
-            </div>
-          )}
-
-          {/* Optional Fields */}
-          <details className="group">
-            <summary className="cursor-pointer rounded-lg border border-white/[0.06] bg-white/[0.02] p-4 text-sm font-medium text-[var(--color-neutral-white)]">
-              ⚙️ Campos avanzados (opcional)
-            </summary>
-            <div className="mt-3 space-y-4 border border-white/[0.06] bg-white/[0.02] p-5 rounded-lg">
-              {/* PCU Link */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Link de PCU</span>
-                <input
-                  value={supportPcuLink}
-                  onChange={(e) => setSupportPcuLink(e.target.value)}
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-                  placeholder="https://pcu-es.gta.world/view/user/xxxx"
-                />
-                {supportPcuLink.trim() && !pcuLinkIsValid ? (
-                  <p className="mt-1 text-xs text-[var(--color-accent-red)]">Debe empezar con http:// o https://</p>
-                ) : null}
-              </label>
-
-              {/* Specific Infraction */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Falta específica</span>
-                <select
-                  value={policyFault}
-                  onChange={(e) => selectInfraction(e.target.value)}
-                  className={selectClassName}
-                  style={{ colorScheme: "dark" }}
-                >
-                  {currentInfractions.map((infraction) => (
-                    <option key={infraction.fault} value={infraction.fault} className={optionClassName}>
-                      {infraction.fault}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {/* Tags */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Categorías</span>
-                <div className="flex flex-wrap gap-2">
-                  {categoryOptions.map((category) => {
-                    const active = categorias.includes(category);
-                    return (
-                      <button
-                        key={category}
-                        type="button"
-                        onClick={() => toggleCategory(category)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs transition-all duration-200 ${
-                          active
-                            ? "border-[var(--color-accent-red)]/45 bg-[var(--color-accent-red)]/18 text-[var(--color-accent-red)]"
-                            : "border-white/[0.08] bg-white/[0.03] text-[var(--color-neutral-grey)] hover:text-[var(--color-neutral-white)]"
-                        }`}
-                      >
-                        {category}
-                      </button>
-                    );
-                  })}
-                </div>
-              </label>
-
-              {/* Observations */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Observaciones finales</span>
-                <textarea
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  className="min-h-14 w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-                  placeholder="Contexto adicional, notas internas, historial..."
-                />
-              </label>
-
-              {/* Date */}
-              <label className="block">
-                <span className="mb-2 block text-xs font-medium text-[var(--color-neutral-white)]">Fecha (DD/MM/AA)</span>
-                <input
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm outline-none transition-all focus:border-[#ffac00]/40"
-                />
-                {!dateIsValid ? (
-                  <p className="mt-1 text-xs text-[var(--color-accent-red)]">Formato: DD/MM/AA</p>
-                ) : null}
-              </label>
-            </div>
-          </details>
 
           {/* Submit Button */}
           <button
