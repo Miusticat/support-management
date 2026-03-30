@@ -26,6 +26,12 @@ type PositivePointCategory = {
   descripcion: string;
 };
 
+type PointCategoryKey =
+  | "Calidad en la gestión de tickets"
+  | "Compromiso y profesionalismo"
+  | "Aporte estructural al equipo"
+  | "Constancia y desempeño sostenido";
+
 type SelectedMerit = {
   category: string;
   accion: string;
@@ -33,7 +39,7 @@ type SelectedMerit = {
   descripcion: string;
 };
 
-const pointsCategories = {
+const pointsCategories: Record<PointCategoryKey, PositivePointCategory[]> = {
   "Calidad en la gestión de tickets": [
     {
       accion: "Gestión correcta y completa de tickets de forma consistente",
@@ -129,6 +135,8 @@ const pointsCategories = {
   ],
 };
 
+const pointCategoryOptions = Object.keys(pointsCategories) as PointCategoryKey[];
+
 const pointLevelLabel = (points: number) => {
   if (points <= 0.5) return "Normal";
   if (points <= 1) return "Intermedio";
@@ -220,7 +228,7 @@ export function DiscordPositivePointsStudio() {
   const [adminOtorga, setAdminOtorga] = useState("");
   const [adminDiscordId, setAdminDiscordId] = useState("");
   const [justificacion, setJustificacion] = useState("");
-  const [pointCategory, setPointCategory] = useState("Calidad en la gestión de tickets");
+  const [pointCategory, setPointCategory] = useState<PointCategoryKey>("Calidad en la gestión de tickets");
   const [pointAction, setPointAction] = useState(
     pointsCategories["Calidad en la gestión de tickets"][0]?.accion ?? ""
   );
@@ -454,7 +462,7 @@ export function DiscordPositivePointsStudio() {
     };
   }, []);
 
-  function selectPointCategory(category: string) {
+  function selectPointCategory(category: PointCategoryKey) {
     setPointCategory(category);
     const firstMerit = pointsCategories[category]?.[0];
 
@@ -718,11 +726,11 @@ export function DiscordPositivePointsStudio() {
               <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Categoría del mérito</span>
               <select
                 value={pointCategory}
-                onChange={(e) => selectPointCategory(e.target.value)}
+                onChange={(e) => selectPointCategory(e.target.value as PointCategoryKey)}
                 className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#10b981]/40"
                 style={{ colorScheme: "dark" }}
               >
-                {Object.keys(pointsCategories).map((category) => (
+                {pointCategoryOptions.map((category) => (
                   <option key={category} value={category} className="bg-[#1a1a1a] text-[var(--color-neutral-white)]">
                     {category}
                   </option>
