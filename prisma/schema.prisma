@@ -112,3 +112,31 @@ model StaffPositivePoints {
   @@index([supportDiscordId])
   @@index([createdAt])
 }
+
+model SanctionPolicyCategory {
+  id         String                   @id @default(cuid())
+  name       String                   @unique
+  sortOrder  Int                      @default(0)
+  isActive   Boolean                  @default(true)
+  createdAt  DateTime                 @default(now())
+  updatedAt  DateTime                 @updatedAt
+  infractions SanctionPolicyInfraction[]
+
+  @@index([sortOrder])
+}
+
+model SanctionPolicyInfraction {
+  id          String                @id @default(cuid())
+  categoryId  String
+  category    SanctionPolicyCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  fault       String
+  sanction    String
+  tags        String[]
+  sortOrder   Int                   @default(0)
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@index([categoryId])
+  @@index([sortOrder])
+}

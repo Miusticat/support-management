@@ -20,6 +20,17 @@ type ApiErrorResponse = {
   error?: string;
 };
 
+type SanctionPolicyApiCategory = {
+  id: string;
+  name: string;
+  infractions: Array<{
+    id: string;
+    fault: string;
+    sanction: string;
+    tags: string[];
+  }>;
+};
+
 type PolicyInfraction = {
   fault: string;
   sanction: string;
@@ -50,7 +61,7 @@ const categoryOptions = [
 ];
 const defaultPolicyCategory = "Conducta y actitud";
 
-const policyInfractions: Record<string, PolicyInfraction[]> = {
+const defaultPolicyInfractions: Record<string, PolicyInfraction[]> = {
   "Conducta y actitud": [
     {
       fault: "Responder de forma agresiva, cortante o poco profesional",
@@ -564,15 +575,20 @@ export function DiscordSanctionStudio() {
   const [adminSanciona, setAdminSanciona] = useState("");
   const [adminDiscordId, setAdminDiscordId] = useState("");
   const [motivo, setMotivo] = useState("");
+  const [policyInfractionsConfig, setPolicyInfractionsConfig] = useState<Record<string, PolicyInfraction[]>>(
+    defaultPolicyInfractions
+  );
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyError, setPolicyError] = useState<string | null>(null);
   const [policyCategory, setPolicyCategory] = useState(defaultPolicyCategory);
   const [policyFault, setPolicyFault] = useState(
-    policyInfractions[defaultPolicyCategory][0]?.fault ?? ""
+    defaultPolicyInfractions[defaultPolicyCategory][0]?.fault ?? ""
   );
   const [selectedInfractions, setSelectedInfractions] = useState<SelectedInfraction[]>([]);
   const [categorias, setCategorias] = useState<string[]>([]);
   const [pruebas, setPruebas] = useState("");
   const [sancion, setSancion] = useState(
-    policyInfractions["Conducta y actitud"][0]?.sanction ?? "Advertencia"
+    defaultPolicyInfractions["Conducta y actitud"][0]?.sanction ?? "Advertencia"
   );
   const [prevAdvertencias, setPrevAdvertencias] = useState(0);
   const [prevWarnIntermedios, setPrevWarnIntermedios] = useState(0);
@@ -602,9 +618,14 @@ export function DiscordSanctionStudio() {
     [supportPcuLink]
   );
 
+  const policyCategoryOptions = useMemo(
+    () => Object.keys(policyInfractionsConfig),
+    [policyInfractionsConfig]
+  );
+
   const currentInfractions = useMemo(
-    () => policyInfractions[policyCategory] ?? [],
-    [policyCategory]
+    () => policyInfractionsConfig[policyCategory] ?? [],
+    [policyInfractionsConfig, policyCategory]
   );
   const selectedInfractionsText = useMemo(
     () =>
@@ -787,6 +808,75 @@ export function DiscordSanctionStudio() {
   useEffect(() => {
     let active = true;
 
+    async function loadPolicyConfig() {
+      setPolicyLoading(true);
+      setPolicyError(null);
+
+      try {
+        const response = await fetch("/api/discord/sanction-policies", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = await parseJsonSafe<{ categories?: SanctionPolicyApiCategory[]; error?: string }>(response);
+        if (!response.ok) {
+          throw new Error(data?.error || "No se pudo cargar la política de sanciones");
+        }
+
+        if (!active) {
+          return;
+        }
+
+        const categories = Array.isArray(data?.categories) ? data.categories : [];
+        if (categories.length === 0) {
+          setPolicyInfractionsConfig(defaultPolicyInfractions);
+          return;
+        }
+
+        const mapped: Record<string, PolicyInfraction[]> = {};
+        for (const category of categories) {
+          mapped[category.name] = category.infractions.map((infraction) => ({
+            fault: infraction.fault,
+            sanction: infraction.sanction,
+            tags: Array.isArray(infraction.tags) ? infraction.tags : [],
+          }));
+        }
+
+        setPolicyInfractionsConfig(mapped);
+
+        const firstCategory = Object.keys(mapped)[0] ?? defaultPolicyCategory;
+        const firstFault = mapped[firstCategory]?.[0];
+
+        setPolicyCategory((current) => (mapped[current] ? current : firstCategory));
+        if (firstFault) {
+          setPolicyFault(firstFault.fault);
+          setSancion(firstFault.sanction);
+        }
+      } catch (loadError) {
+        if (!active) {
+          return;
+        }
+
+        const message = loadError instanceof Error ? loadError.message : "Error desconocido";
+        setPolicyError(message);
+        setPolicyInfractionsConfig(defaultPolicyInfractions);
+      } finally {
+        if (active) {
+          setPolicyLoading(false);
+        }
+      }
+    }
+
+    void loadPolicyConfig();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
     async function loadSupportOptions(showLoading: boolean) {
       if (showLoading) {
         setSupportOptionsLoading(true);
@@ -927,7 +1017,7 @@ export function DiscordSanctionStudio() {
 
   function selectPolicyCategory(category: string) {
     setPolicyCategory(category);
-    const firstInfraction = policyInfractions[category]?.[0];
+    const firstInfraction = policyInfractionsConfig[category]?.[0];
 
     if (!firstInfraction) {
       setPolicyFault("");
@@ -1247,13 +1337,17 @@ export function DiscordSanctionStudio() {
                 onChange={(e) => selectPolicyCategory(e.target.value)}
                 className={selectClassName}
                 style={{ colorScheme: "dark" }}
+                disabled={policyLoading || policyCategoryOptions.length === 0}
               >
-                {Object.keys(policyInfractions).map((category) => (
+                {policyCategoryOptions.map((category) => (
                   <option key={category} value={category} className={optionClassName}>
                     {category}
                   </option>
                 ))}
               </select>
+              {policyError ? (
+                <p className="mt-2 text-xs text-[var(--color-accent-red)]">{policyError}</p>
+              ) : null}
             </label>
           </div>
 
