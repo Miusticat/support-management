@@ -18,6 +18,7 @@ type SanctionRequestBody = {
   categorias?: string[];
   pruebas?: string;
   sancion?: string;
+  criticalCase?: boolean;
   observaciones?: string;
 };
 
@@ -129,8 +130,15 @@ function getAccumulationCounts(sanctions: { appliedSanction: string }[]): Sancti
   return counts;
 }
 
-function resolveFinalSanction(baseSanction: string, counts: SanctionCounts) {
+function resolveFinalSanction(baseSanction: string, counts: SanctionCounts, criticalCase = false) {
   const totalIntermedios = counts.warnIntermedios + (baseSanction === "Warn Intermedio" ? 1 : 0);
+
+  if (criticalCase && baseSanction === "Warn Grave") {
+    return {
+      finalSanction: "Remocion",
+      note: "Warn Grave en falta critica: se aplica Remocion directa por gravedad.",
+    };
+  }
 
   if (totalIntermedios >= 3) {
     return {
@@ -146,7 +154,7 @@ function resolveFinalSanction(baseSanction: string, counts: SanctionCounts) {
     };
   }
 
-  if (baseSanction === "Advertencia" && counts.advertencias >= 2) {
+  if (baseSanction === "Advertencia" && counts.advertencias >= 1) {
     return {
       finalSanction: "Warn Intermedio",
       note: "Acumulacion de advertencias: se eleva automaticamente a Warn Intermedio.",
@@ -157,6 +165,13 @@ function resolveFinalSanction(baseSanction: string, counts: SanctionCounts) {
     return {
       finalSanction: baseSanction,
       note: "Acumulacion de 2 Warn Intermedios: corresponde evaluacion inmediata del puesto.",
+    };
+  }
+
+  if (baseSanction === "Warn Intermedio") {
+    return {
+      finalSanction: baseSanction,
+      note: "Warn Intermedio aplicado: corresponde seguimiento del desempeño.",
     };
   }
 
@@ -259,6 +274,7 @@ export async function POST(request: Request) {
     !body.fecha ||
     !body.supportSancionado ||
     !body.supportDiscordId ||
+    !body.supportPcuLink ||
     !body.adminSanciona ||
     !body.motivo ||
     !body.sancion
@@ -266,7 +282,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "fecha, supportSancionado, supportDiscordId, adminSanciona, motivo and sancion are required",
+          "fecha, supportSancionado, supportDiscordId, supportPcuLink, adminSanciona, motivo and sancion are required",
       },
       { status: 400 }
     );
@@ -274,7 +290,7 @@ export async function POST(request: Request) {
 
   const counts = await getSupportCounts(body.supportDiscordId);
   const baseSancion = body.sancion;
-  const resolution = resolveFinalSanction(baseSancion, counts);
+  const resolution = resolveFinalSanction(baseSancion, counts, Boolean(body.criticalCase));
   const finalSanction = resolution.finalSanction;
   const finalLevel = sanctionLevelLabel(finalSanction);
 
@@ -353,6 +369,7 @@ export async function POST(request: Request) {
           fields: [
             { name: "Sanci\u00f3n solicitada", value: `${baseSancion} (${sanctionLevelLabel(baseSancion)})`, inline: true },
             { name: "Sanci\u00f3n final aplicada", value: `**${finalSanction}** (${finalLevel})`, inline: true },
+            { name: "Caso critico", value: body.criticalCase ? "Si" : "No", inline: true },
           ],
         },
         {

@@ -26,12 +26,13 @@ type PolicyInfraction = {
   tags: string[];
 };
 
-const categoryOptions = ["Conducta", "Staff", "RP", "Comandos", "Criterio", "Actividad"];
+const categoryOptions = ["Conducta", "Staff", "RP", "Comandos", "Criterio", "Actividad", "Ausencias"];
+const defaultPolicyCategory = "Conducta y actitud";
 
 const policyInfractions: Record<string, PolicyInfraction[]> = {
   "Conducta y actitud": [
     {
-      fault: "Responder de forma cortante, agresiva o poco profesional",
+      fault: "Responder de forma agresiva, cortante o poco profesional",
       sanction: "Warn Intermedio",
       tags: ["Conducta", "Staff"],
     },
@@ -41,38 +42,120 @@ const policyInfractions: Record<string, PolicyInfraction[]> = {
       tags: ["Conducta", "Staff"],
     },
     {
+      fault: "Falta de respeto hacia miembros del staff",
+      sanction: "Warn Grave",
+      tags: ["Conducta", "Staff"],
+    },
+    {
       fault: "Actitud toxica o provocadora",
       sanction: "Warn Grave",
       tags: ["Conducta", "Staff"],
     },
+    {
+      fault: "Generar discusiones innecesarias con usuarios",
+      sanction: "Warn Intermedio",
+      tags: ["Conducta"],
+    },
+    {
+      fault: "Uso de sarcasmo o burlas hacia usuarios",
+      sanction: "Warn Grave",
+      tags: ["Conducta"],
+    },
+    {
+      fault: "Actitud de superioridad frente a la comunidad",
+      sanction: "Warn Grave",
+      tags: ["Conducta"],
+    },
+    {
+      fault: "Desacreditar decisiones del staff publicamente",
+      sanction: "Warn Grave",
+      tags: ["Conducta", "Staff"],
+    },
   ],
-  Roleplay: [
+  "Conducta dentro del equipo de staff": [
     {
-      fault: "No respetar normas dentro del RP",
+      fault: "No aceptar feedback o correcciones",
+      sanction: "Warn Intermedio",
+      tags: ["Staff", "Criterio"],
+    },
+    {
+      fault: "Actitud defensiva o conflictiva ante feedback",
+      sanction: "Warn Grave",
+      tags: ["Staff", "Conducta"],
+    },
+    {
+      fault: "Ignorar indicaciones de Support Trainers o Support Lead",
+      sanction: "Warn Grave",
+      tags: ["Staff", "Criterio"],
+    },
+    {
+      fault: "Discutir decisiones administrativas de forma inapropiada",
+      sanction: "Warn Grave",
+      tags: ["Staff", "Conducta"],
+    },
+    {
+      fault: "Generar mal ambiente dentro del equipo",
+      sanction: "Warn Grave",
+      tags: ["Staff", "Conducta"],
+    },
+  ],
+  "Comportamiento en Roleplay": [
+    {
+      fault: "Incumplir normas del servidor en RP",
       sanction: "Warn Grave",
       tags: ["RP"],
     },
     {
-      fault: "Acciones antirol siendo staff",
+      fault: "No dar ejemplo dentro del roleplay",
+      sanction: "Warn Intermedio",
+      tags: ["RP"],
+    },
+    {
+      fault: "Realizar acciones antirol siendo staff",
       sanction: "Warn Grave",
       tags: ["RP"],
     },
     {
-      fault: "Metagaming para beneficio en RP",
+      fault: "Arruinar o interrumpir situaciones de roleplay",
+      sanction: "Warn Grave",
+      tags: ["RP"],
+    },
+    {
+      fault: "Uso de informacion OOC (Metagaming)",
       sanction: "Remocion",
       tags: ["RP", "Criterio"],
     },
-  ],
-  "Comandos y herramientas": [
     {
-      fault: "Uso incorrecto de comandos o canales",
+      fault: "Forzar situaciones de rol injustificadamente",
+      sanction: "Warn Grave",
+      tags: ["RP"],
+    },
+    {
+      fault: "Intervenir como staff sin justificacion",
+      sanction: "Warn Grave",
+      tags: ["RP", "Criterio"],
+    },
+    {
+      fault: "Uso del rol de staff para intimidar jugadores",
+      sanction: "Remocion",
+      tags: ["RP", "Staff"],
+    },
+  ],
+  "Uso de herramientas administrativas": [
+    {
+      fault: "Uso incorrecto de comandos o herramientas",
       sanction: "Advertencia",
       tags: ["Comandos"],
     },
     {
-      fault: "Uso de herramientas para beneficio propio",
+      fault: "Uso con beneficio propio",
       sanction: "Warn Grave",
       tags: ["Comandos", "Criterio"],
+    },
+    {
+      fault: "Uso para evadir sanciones propias",
+      sanction: "Suspension",
+      tags: ["Comandos", "Staff"],
     },
     {
       fault: "Abuso de poderes de staff",
@@ -80,7 +163,7 @@ const policyInfractions: Record<string, PolicyInfraction[]> = {
       tags: ["Comandos", "Criterio", "Staff"],
     },
   ],
-  "Criterio y gestion": [
+  "Gestion de situaciones y criterio": [
     {
       fault: "Resolver tickets sin revisar correctamente",
       sanction: "Advertencia",
@@ -92,14 +175,29 @@ const policyInfractions: Record<string, PolicyInfraction[]> = {
       tags: ["Criterio", "Staff"],
     },
     {
-      fault: "Mostrar favoritismo",
+      fault: "Ignorar reportes o tickets",
+      sanction: "Advertencia",
+      tags: ["Criterio", "Actividad"],
+    },
+    {
+      fault: "Favorecer a conocidos o amigos",
       sanction: "Warn Grave",
       tags: ["Criterio", "Staff"],
     },
+    {
+      fault: "Intervenir innecesariamente en situaciones",
+      sanction: "Warn Intermedio",
+      tags: ["Criterio"],
+    },
   ],
-  Actividad: [
+  "Actividad e inactividad": [
     {
       fault: "Baja actividad sin justificacion",
+      sanction: "Advertencia",
+      tags: ["Actividad"],
+    },
+    {
+      fault: "No atender tickets estando disponible",
       sanction: "Advertencia",
       tags: ["Actividad"],
     },
@@ -109,9 +207,31 @@ const policyInfractions: Record<string, PolicyInfraction[]> = {
       tags: ["Actividad"],
     },
     {
+      fault: "Conectarse sin ejercer funciones de soporte",
+      sanction: "Warn Intermedio",
+      tags: ["Actividad"],
+    },
+    {
       fault: "Inactividad prolongada sin aviso",
       sanction: "Remocion",
       tags: ["Actividad"],
+    },
+  ],
+  "Sistema de ausencias": [
+    {
+      fault: "Ausencia menor a 3 dias sin aviso",
+      sanction: "Advertencia",
+      tags: ["Ausencias", "Actividad"],
+    },
+    {
+      fault: "Ausencia mayor a 5 dias sin aviso",
+      sanction: "Warn Intermedio",
+      tags: ["Ausencias", "Actividad"],
+    },
+    {
+      fault: "Ausencia prolongada sin comunicacion",
+      sanction: "Remocion",
+      tags: ["Ausencias", "Actividad"],
     },
   ],
 };
@@ -204,8 +324,13 @@ function suggestedSanction(
   sanction: string,
   prevAdvertencias: number,
   prevWarnIntermedios: number,
-  prevWarnGraves: number
+  prevWarnGraves: number,
+  criticalCase: boolean
 ) {
+  if (criticalCase && sanction === "Warn Grave") {
+    return "Remocion";
+  }
+
   const intermediosTotal = prevWarnIntermedios + (sanction === "Warn Intermedio" ? 1 : 0);
 
   if (intermediosTotal >= 3) {
@@ -216,7 +341,7 @@ function suggestedSanction(
     return "Suspension";
   }
 
-  if (sanction === "Advertencia" && prevAdvertencias >= 2) {
+  if (sanction === "Advertencia" && prevAdvertencias >= 1) {
     return "Warn Intermedio";
   }
 
@@ -254,9 +379,9 @@ export function DiscordSanctionStudio() {
   const [adminSanciona, setAdminSanciona] = useState("");
   const [adminDiscordId, setAdminDiscordId] = useState("");
   const [motivo, setMotivo] = useState("");
-  const [policyCategory, setPolicyCategory] = useState("Conducta y actitud");
+  const [policyCategory, setPolicyCategory] = useState(defaultPolicyCategory);
   const [policyFault, setPolicyFault] = useState(
-    policyInfractions["Conducta y actitud"][0]?.fault ?? ""
+    policyInfractions[defaultPolicyCategory][0]?.fault ?? ""
   );
   const [categorias, setCategorias] = useState<string[]>([]);
   const [pruebas, setPruebas] = useState("");
@@ -267,6 +392,7 @@ export function DiscordSanctionStudio() {
   const [prevWarnIntermedios, setPrevWarnIntermedios] = useState(0);
   const [prevWarnGraves, setPrevWarnGraves] = useState(0);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [criticalCase, setCriticalCase] = useState(false);
   const [observaciones, setObservaciones] = useState("");
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [supportOptions, setSupportOptions] = useState<SupportOption[]>([]);
@@ -295,8 +421,8 @@ export function DiscordSanctionStudio() {
   );
 
   const recommendedSanction = useMemo(
-    () => suggestedSanction(sancion, prevAdvertencias, prevWarnIntermedios, prevWarnGraves),
-    [sancion, prevAdvertencias, prevWarnIntermedios, prevWarnGraves]
+    () => suggestedSanction(sancion, prevAdvertencias, prevWarnIntermedios, prevWarnGraves, criticalCase),
+    [sancion, prevAdvertencias, prevWarnIntermedios, prevWarnGraves, criticalCase]
   );
   const previewFinalSanction = useMemo(
     () => recommendedSanction,
@@ -342,11 +468,15 @@ export function DiscordSanctionStudio() {
     if (!sancion.trim()) missing.push("Sancion");
 
     return missing;
-  }, [fecha, supportSancionado, adminSanciona, motivo, sancion]);
+  }, [fecha, supportSancionado, supportPcuLink, adminSanciona, motivo, sancion]);
 
   const accumulationNote = useMemo(() => {
     const totalIntermedios =
       prevWarnIntermedios + (sancion === "Warn Intermedio" ? 1 : 0);
+
+    if (criticalCase && sancion === "Warn Grave") {
+      return "Warn Grave marcado como falta critica: se recomienda Remocion directa.";
+    }
 
     if (sancion === "Warn Grave" && (prevWarnGraves > 0 || prevWarnIntermedios > 0)) {
       return "Warn Grave con antecedentes: evaluar Suspension o Remocion segun gravedad.";
@@ -360,12 +490,16 @@ export function DiscordSanctionStudio() {
       return "Acumulacion de 2 Warn Intermedios: corresponde evaluacion inmediata del puesto.";
     }
 
-    if (prevAdvertencias >= 2) {
-      return "Hay acumulacion de advertencias: considerar elevar a Warn Intermedio.";
+    if (sancion === "Advertencia" && prevAdvertencias >= 1) {
+      return "Acumulacion de 2 Advertencias: corresponde elevar a Warn Intermedio.";
+    }
+
+    if (totalIntermedios === 1) {
+      return "Warn Intermedio aplicado: corresponde seguimiento del desempeño.";
     }
 
     return "Sin escalamiento automatico por acumulacion en este registro.";
-  }, [prevAdvertencias, prevWarnIntermedios, prevWarnGraves, sancion]);
+  }, [criticalCase, prevAdvertencias, prevWarnIntermedios, prevWarnGraves, sancion]);
 
   const previewDescription = useMemo(() => {
     return {
@@ -606,6 +740,34 @@ export function DiscordSanctionStudio() {
     }
   }
 
+  function selectInfraction(fault: string) {
+    setPolicyFault(fault);
+    const infraction = currentInfractions.find((item) => item.fault === fault);
+
+    if (!infraction) {
+      return;
+    }
+
+    setSancion(infraction.sanction);
+
+    if (infraction.tags.length > 0) {
+      setCategorias(infraction.tags);
+    }
+
+    if (!motivo.trim()) {
+      setMotivo(
+        buildMotivoTemplate(
+          supportSancionado,
+          policyCategory,
+          fault,
+          infraction.sanction,
+          sanctionLevelLabel(infraction.sanction),
+          pruebas
+        )
+      );
+    }
+  }
+
   async function copyPreview() {
     const previewText = [
       "## Registro de sanción:",
@@ -634,6 +796,7 @@ export function DiscordSanctionStudio() {
       "",
       "**Sanción:**",
       `${sancion} (${levelText})`,
+      criticalCase ? "Caso crítico: SI" : "Caso crítico: NO",
       "",
       "**Acumulación:**",
       `Advertencias previas: ${prevAdvertencias}`,
@@ -702,6 +865,7 @@ export function DiscordSanctionStudio() {
           categorias,
           pruebas,
           sancion,
+          criticalCase,
           observaciones,
         }),
       });
@@ -745,6 +909,7 @@ export function DiscordSanctionStudio() {
       setSupportDiscordId("");
       setSupportPcuLink("");
       setMotivo("");
+      setCriticalCase(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Error desconocido";
       setPublish({ loading: false, error: message, success: null });
@@ -859,6 +1024,24 @@ export function DiscordSanctionStudio() {
             </label>
           </div>
 
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[var(--color-neutral-white)]">Falta específica</span>
+              <select
+                value={policyFault}
+                onChange={(e) => selectInfraction(e.target.value)}
+                className={selectClassName}
+                style={{ colorScheme: "dark" }}
+              >
+                {currentInfractions.map((infraction) => (
+                  <option key={infraction.fault} value={infraction.fault} className={optionClassName}>
+                    {infraction.fault}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
           {/* Description - Core Field */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
             <label className="block">
@@ -918,6 +1101,16 @@ export function DiscordSanctionStudio() {
                   Sugerencia: {recommendedSanction}
                 </button>
               ) : null}
+
+              <label className="mt-4 flex items-center gap-2 text-xs text-[var(--color-neutral-grey)]">
+                <input
+                  type="checkbox"
+                  checked={criticalCase}
+                  onChange={(e) => setCriticalCase(e.target.checked)}
+                  className="h-4 w-4 rounded border border-white/[0.2] bg-white/[0.04]"
+                />
+                Marcar como falta crítica (permite escalar Warn Grave a Remoción)
+              </label>
             </label>
           </div>
 
