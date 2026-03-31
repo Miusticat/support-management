@@ -31,6 +31,11 @@ type SupportSummary = {
     suspension: number;
     remocion: number;
   };
+  positivePoints: {
+    total: number;
+    records: number;
+    lastGrantedAt: string | null;
+  };
   status: {
     label: string;
     severity: "clean" | "low" | "medium" | "high" | "critical";
@@ -53,6 +58,13 @@ type LifecycleRow = {
 type LifecycleRequestBody = {
   supportDiscordId?: string;
   manualStatus?: "Activo" | "Expulsado" | "Renuncio" | "Reincorporado";
+};
+
+type PositivePointsAggregateRow = {
+  supportDiscordId: string;
+  totalPoints: number;
+  records: number;
+  lastGrantedAt: Date | null;
 };
 
 const MANUAL_STATUS_OPTIONS = ["Activo", "Expulsado", "Renuncio", "Reincorporado"] as const;
@@ -146,6 +158,14 @@ function emptySanctions() {
   };
 }
 
+function emptyPositivePoints() {
+  return {
+    total: 0,
+    records: 0,
+    lastGrantedAt: null as string | null,
+  };
+}
+
 function resolveStatus(sanctions: ReturnType<typeof emptySanctions>) {
   if (sanctions.total === 0) {
     return { label: "Historial limpio", severity: "clean" as const, score: 0 };
@@ -190,6 +210,52 @@ async function loadSanctionsFromDb() {
   return prisma.$queryRaw<Array<{ supportDiscordId: string; appliedSanction: string }>>`
     SELECT "supportDiscordId", "appliedSanction"
     FROM "StaffSanction"
+  `;
+}
+
+async function loadPositivePointsFromDb() {
+  const delegate = (prisma as unknown as {
+    staffPositivePoints?: {
+      groupBy: (args: {
+        by: ["supportDiscordId"];
+        _sum: { pointValue: true };
+        _count: { _all: true };
+        _max: { createdAt: true };
+      }) => Promise<
+        Array<{
+          supportDiscordId: string;
+          _sum: { pointValue: number | null };
+          _count: { _all: number };
+          _max: { createdAt: Date | null };
+        }>
+      >;
+    };
+  }).staffPositivePoints;
+
+  if (delegate?.groupBy) {
+    const grouped = await delegate.groupBy({
+      by: ["supportDiscordId"],
+      _sum: { pointValue: true },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+
+    return grouped.map((row) => ({
+      supportDiscordId: row.supportDiscordId,
+      totalPoints: Number(row._sum.pointValue ?? 0),
+      records: row._count._all,
+      lastGrantedAt: row._max.createdAt,
+    }));
+  }
+
+  return prisma.$queryRaw<PositivePointsAggregateRow[]>`
+    SELECT
+      "supportDiscordId",
+      COALESCE(SUM("pointValue"), 0)::float AS "totalPoints",
+      COUNT(*)::int AS "records",
+      MAX("createdAt") AS "lastGrantedAt"
+    FROM "StaffPositivePoints"
+    GROUP BY "supportDiscordId"
   `;
 }
 
@@ -243,13 +309,15 @@ export async function GET() {
   }
 
   try {
-    const [members, sanctionRows, lifecycleRows] = await Promise.all([
+    const [members, sanctionRows, lifecycleRows, positivePointsRows] = await Promise.all([
       fetchGuildMembers(guildId, botToken),
       loadSanctionsFromDb(),
       loadLifecycleState(),
+      loadPositivePointsFromDb(),
     ]);
 
     const sanctionsBySupport = new Map<string, ReturnType<typeof emptySanctions>>();
+    const positivePointsBySupport = new Map<string, ReturnType<typeof emptyPositivePoints>>();
     const lifecycleBySupport = new Map<string, LifecycleRow>();
 
     for (const lifecycle of lifecycleRows) {
@@ -306,6 +374,19 @@ export async function GET() {
       sanctionsBySupport.set(supportId, current);
     }
 
+    for (const row of positivePointsRows) {
+      const supportId = row.supportDiscordId?.trim();
+      if (!supportId) {
+        continue;
+      }
+
+      positivePointsBySupport.set(supportId, {
+        total: Number(row.totalPoints ?? 0),
+        records: Number(row.records ?? 0),
+        lastGrantedAt: row.lastGrantedAt ? new Date(row.lastGrantedAt).toISOString() : null,
+      });
+    }
+
     const supports: SupportSummary[] = members
       .map((member) => {
         const id = member.user?.id?.trim() ?? "";
@@ -328,6 +409,7 @@ export async function GET() {
         }
 
         const sanctions = sanctionsBySupport.get(id) ?? emptySanctions();
+        const positivePoints = positivePointsBySupport.get(id) ?? emptyPositivePoints();
         const status = resolveStatus(sanctions);
         const lifecycle = lifecycleBySupport.get(id);
         const manualStatus =
@@ -343,6 +425,7 @@ export async function GET() {
           role: roleInfo.role,
           roleLevel: roleInfo.roleLevel,
           sanctions,
+          positivePoints,
           status,
           manualStatus: {
             value: manualStatus,
