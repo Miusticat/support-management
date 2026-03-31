@@ -1,4 +1,4 @@
-import { AlertTriangle, ShieldCheck, UsersRound, UserX } from "lucide-react";
+import { Award, ShieldCheck, UsersRound, UserX } from "lucide-react";
 import { ChartsPanelShell } from "@/app/components/charts-panel-shell";
 import { PageHeader } from "@/app/components/page-header";
 import { PageShell } from "@/app/components/page-shell";
@@ -8,12 +8,22 @@ import { TeamSupportPanel } from "@/app/components/team-support-panel";
 
 export const dynamic = "force-dynamic";
 
-const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-
 type SanctionRow = {
   supportDiscordId: string;
   appliedSanction: string;
   createdAt: Date;
+};
+
+type PositivePointsRankingRow = {
+  supportDiscordId: string;
+  supportName: string;
+  totalPoints: number;
+  totalRecords: number;
+};
+
+type PositivePointsTotalsRow = {
+  totalPoints: number;
+  totalRecords: number;
 };
 
 type LifecycleRow = {
@@ -110,6 +120,43 @@ async function loadDashboardData() {
     FROM "StaffSanction"
   `;
 
+  let positivePointsRankingRows: PositivePointsRankingRow[] = [];
+  try {
+    positivePointsRankingRows = await prisma.$queryRaw<PositivePointsRankingRow[]>`
+      SELECT
+        "supportDiscordId",
+        MAX("supportName") AS "supportName",
+        SUM("pointValue")::float AS "totalPoints",
+        COUNT(*)::int AS "totalRecords"
+      FROM "StaffPositivePoints"
+      GROUP BY "supportDiscordId"
+      ORDER BY SUM("pointValue") DESC, COUNT(*) DESC
+      LIMIT 8
+    `;
+  } catch {
+    positivePointsRankingRows = [];
+  }
+
+  let positivePointsTotals: PositivePointsTotalsRow = {
+    totalPoints: 0,
+    totalRecords: 0,
+  };
+  try {
+    const totalsRows = await prisma.$queryRaw<PositivePointsTotalsRow[]>`
+      SELECT
+        COALESCE(SUM("pointValue"), 0)::float AS "totalPoints",
+        COUNT(*)::int AS "totalRecords"
+      FROM "StaffPositivePoints"
+    `;
+
+    positivePointsTotals = totalsRows[0] ?? positivePointsTotals;
+  } catch {
+    positivePointsTotals = {
+      totalPoints: 0,
+      totalRecords: 0,
+    };
+  }
+
   let lifecycleRows: LifecycleRow[] = [];
   try {
     lifecycleRows = await prisma.$queryRaw<LifecycleRow[]>`
@@ -138,6 +185,8 @@ async function loadDashboardData() {
     breakdownMap.set(row.appliedSanction, (breakdownMap.get(row.appliedSanction) ?? 0) + 1);
   }
 
+  const totalPositivePointsGiven = Number(positivePointsTotals.totalPoints ?? 0);
+
   const inactiveSupports = new Set<string>();
 
   for (const row of lifecycleRows) {
@@ -157,38 +206,8 @@ async function loadDashboardData() {
     ["Expulsado", "Renuncio"].includes(row.manualStatus)
   ).length;
 
-  const now = new Date();
-  const monthlyCounts = Array.from({ length: 12 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - (11 - index), 1);
-    return {
-      year: date.getFullYear(),
-      month: date.getMonth(),
-      label: monthLabels[date.getMonth()],
-      value: 0,
-    };
-  });
-
-  for (const row of sanctionRows) {
-    const rowDate = new Date(row.createdAt);
-    const monthIndex = monthlyCounts.findIndex(
-      (item) => item.year === rowDate.getFullYear() && item.month === rowDate.getMonth()
-    );
-
-    if (monthIndex >= 0) {
-      monthlyCounts[monthIndex].value += 1;
-    }
-  }
-
-  const currentMonthCount = monthlyCounts[11]?.value ?? 0;
-  const previousMonthCount = monthlyCounts[10]?.value ?? 0;
-  const trendPercent =
-    previousMonthCount === 0
-      ? currentMonthCount > 0
-        ? 100
-        : 0
-      : Math.round(((currentMonthCount - previousMonthCount) / previousMonthCount) * 100);
-
-  const trendBadge = `${trendPercent >= 0 ? "+" : ""}${trendPercent}%`;
+  const rankingRowsCount = positivePointsRankingRows.length;
+  const rankingBadge = rankingRowsCount > 0 ? `Top ${rankingRowsCount}` : "Sin datos";
 
   return {
     stats: [
@@ -213,17 +232,27 @@ async function loadDashboardData() {
         icon: UserX,
         gradient: "from-[#ffac00]/15 via-[#e67e22]/18 to-[#ff9800]/12",
       },
+      {
+        title: "Puntos Positivos Otorgados",
+        value: String(Math.round(totalPositivePointsGiven * 10) / 10),
+        description: "Suma de puntos positivos registrados al staff.",
+        icon: Award,
+        gradient: "from-[#ffac00]/18 via-[#ff9800]/12 to-[#ff9f43]/16",
+      },
     ],
-    activityData: monthlyCounts.map((item) => ({ month: item.label, value: item.value })),
+    activityData: positivePointsRankingRows.map((row) => ({
+      month: row.supportName,
+      value: Number(row.totalPoints),
+    })),
     breakdownData: Array.from(breakdownMap.entries())
       .map(([name, value]) => ({ name, value }))
       .filter((item) => item.value > 0),
-    trendBadge,
+    rankingBadge,
   };
 }
 
 export default async function Home() {
-  const { stats, activityData, breakdownData, trendBadge } = await loadDashboardData();
+  const { stats, activityData, breakdownData, rankingBadge } = await loadDashboardData();
 
   return (
     <PageShell>
@@ -243,9 +272,9 @@ export default async function Home() {
         <ChartsPanelShell
           activityData={activityData}
           breakdownData={breakdownData}
-          activityTitle="Actividad de Sanciones"
-          activitySubtitle="Registros por mes durante los ultimos 12 meses"
-          activityBadge={trendBadge}
+          activityTitle="Ranking de Supports Destacados"
+          activitySubtitle="Ordenados por puntos positivos acumulados"
+          activityBadge={rankingBadge}
           breakdownTitle="Distribucion por tipo"
           breakdownSubtitle="Total de sanciones por categoria aplicada"
         />
