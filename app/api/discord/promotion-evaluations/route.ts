@@ -46,8 +46,33 @@ type EvaluationRequestBody = {
   notes?: string;
 };
 
+type PromotionSettingsUpdateBody = {
+  votingDeadlineIso?: string | null;
+};
+
+type PromotionEvaluationSettingsRow = {
+  id: number;
+  votingDeadlineIso: Date | null;
+  createdByDiscordId: string | null;
+  updatedAt: Date;
+};
+
+type PromotionEvaluationCohortRow = {
+  id: string;
+  cohortName: string;
+  cohortStartDate: string;
+  cohortEndDate: string;
+  supportDiscordIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 function canEvaluateByRole(roleName: string | null | undefined) {
   return roleName === "Support Lead" || roleName === "Support Trainer";
+}
+
+function canManageDeadlineByRole(roleName: string | null | undefined) {
+  return roleName === "Support Lead";
 }
 
 async function fetchGuildMembers(guildId: string, botToken: string) {
@@ -124,6 +149,122 @@ async function ensureEvaluationTable() {
       PRIMARY KEY ("supportDiscordId", "evaluatorDiscordId")
     )
   `);
+}
+
+async function ensurePromotionSettingsTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PromotionEvaluationSettings" (
+      "id" INTEGER PRIMARY KEY,
+      "votingDeadlineIso" TIMESTAMP(3),
+      "createdByDiscordId" TEXT,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    INSERT INTO "PromotionEvaluationSettings" ("id", "votingDeadlineIso", "createdByDiscordId", "updatedAt")
+    VALUES (1, NULL, NULL, NOW())
+    ON CONFLICT ("id") DO NOTHING
+  `);
+}
+
+async function ensurePromotionCohortTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PromotionEvaluationCohort" (
+      "id" TEXT PRIMARY KEY,
+      "cohortName" TEXT NOT NULL,
+      "cohortStartDate" TEXT NOT NULL,
+      "cohortEndDate" TEXT NOT NULL,
+      "supportDiscordIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function ensureDefaultCohort(supportIds: string[]) {
+  const { prisma } = await import("@/lib/prisma");
+
+  await ensurePromotionCohortTable();
+
+  await prisma.$executeRaw`
+    INSERT INTO "PromotionEvaluationCohort" (
+      "id",
+      "cohortName",
+      "cohortStartDate",
+      "cohortEndDate",
+      "supportDiscordIds",
+      "updatedAt"
+    ) VALUES (
+      ${"cohort-01"},
+      ${"Primera camada"},
+      ${"07/03/2026"},
+      ${"02/04/2026"},
+      ${supportIds},
+      NOW()
+    )
+    ON CONFLICT ("id") DO NOTHING
+  `;
+}
+
+async function loadPromotionSettings() {
+  const { prisma } = await import("@/lib/prisma");
+  await ensurePromotionSettingsTable();
+
+  const rows = await prisma.$queryRaw<PromotionEvaluationSettingsRow[]>`
+    SELECT
+      "id",
+      "votingDeadlineIso",
+      "createdByDiscordId",
+      "updatedAt"
+    FROM "PromotionEvaluationSettings"
+    WHERE "id" = 1
+    LIMIT 1
+  `;
+
+  return rows[0] ?? null;
+}
+
+async function updatePromotionSettings(input: {
+  votingDeadlineIso: Date | null;
+  createdByDiscordId: string | null;
+}) {
+  const { prisma } = await import("@/lib/prisma");
+  await ensurePromotionSettingsTable();
+
+  await prisma.$executeRaw`
+    UPDATE "PromotionEvaluationSettings"
+    SET
+      "votingDeadlineIso" = ${input.votingDeadlineIso},
+      "createdByDiscordId" = ${input.createdByDiscordId},
+      "updatedAt" = NOW()
+    WHERE "id" = 1
+  `;
+}
+
+async function loadActiveCohort() {
+  const { prisma } = await import("@/lib/prisma");
+  await ensurePromotionCohortTable();
+
+  const rows = await prisma.$queryRaw<PromotionEvaluationCohortRow[]>`
+    SELECT
+      "id",
+      "cohortName",
+      "cohortStartDate",
+      "cohortEndDate",
+      "supportDiscordIds",
+      "createdAt",
+      "updatedAt"
+    FROM "PromotionEvaluationCohort"
+    ORDER BY "createdAt" ASC
+    LIMIT 1
+  `;
+
+  return rows[0] ?? null;
 }
 
 async function loadEvaluations() {
@@ -253,13 +394,20 @@ export async function GET() {
   }
 
   try {
-    const [roster, rows, sanctionRows, positivePointRows] = await Promise.all([
-      loadRoster(),
+    const roster = await loadRoster();
+    await ensureDefaultCohort(roster.supports.map((item) => item.id));
+
+    const [rows, sanctionRows, positivePointRows, settingsRow, activeCohort] = await Promise.all([
       loadEvaluations(),
       loadSupportSanctions(),
       loadSupportPositivePoints(),
+      loadPromotionSettings(),
+      loadActiveCohort(),
     ]);
-    const requiredEvaluations = roster.evaluators.length;
+    const effectiveRoster = roster;
+    const requiredEvaluations = effectiveRoster.evaluators.length;
+    const votingDeadlineIso = settingsRow?.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
+    const votingClosed = Boolean(votingDeadlineIso && votingDeadlineIso.getTime() <= Date.now());
 
     const rowsBySupport = new Map<string, EvaluationRow[]>();
     const sanctionsBySupport = new Map<string, SupportSanctionRow[]>();
@@ -283,7 +431,7 @@ export async function GET() {
       positivePointsBySupport.set(positivePointRow.supportDiscordId, currentRows);
     }
 
-    const supports = roster.supports.map((support) => {
+    const supports = effectiveRoster.supports.map((support) => {
       const supportRows = rowsBySupport.get(support.id) ?? [];
       const supportSanctions = sanctionsBySupport.get(support.id) ?? [];
       const supportPositivePoints = positivePointsBySupport.get(support.id) ?? [];
@@ -295,9 +443,13 @@ export async function GET() {
         (sum, row) => sum + Number(row.pointValue ?? 0),
         0
       );
+      const averageScoreWithFallback = average;
+      const canFinalizeByDeadline = votingClosed && completed > 0;
+      const isFinalized = allEvaluated || canFinalizeByDeadline;
+      const missingEvaluations = Math.max(0, requiredEvaluations - completed);
 
       const evaluatorIds = new Set(supportRows.map((row) => row.evaluatorDiscordId));
-      const pendingEvaluators = roster.evaluators
+      const pendingEvaluators = effectiveRoster.evaluators
         .filter((evaluator) => !evaluatorIds.has(evaluator.id))
         .map((evaluator) => evaluator.displayName);
 
@@ -311,13 +463,14 @@ export async function GET() {
         username: support.username,
         completedEvaluations: completed,
         requiredEvaluations,
-        averageScore: average,
-        decision: allEvaluated
-          ? (average ?? 0) >= 7
+        averageScore: averageScoreWithFallback,
+        decision: isFinalized
+          ? (averageScoreWithFallback ?? 0) >= 7
             ? "Pasa"
             : "No Pasa"
           : "Pendiente",
         pendingEvaluators,
+        autoAveragedMissingVotes: isFinalized ? missingEvaluations : 0,
         evaluations: supportRows.map((row) => ({
           evaluatorName: row.evaluatorName,
           score: row.score,
@@ -375,7 +528,24 @@ export async function GET() {
 
     return NextResponse.json({
       supports,
-      evaluators: roster.evaluators,
+      evaluators: effectiveRoster.evaluators,
+      voting: {
+        deadlineIso: votingDeadlineIso ? votingDeadlineIso.toISOString() : null,
+        isClosed: votingClosed,
+        managedByDiscordId: settingsRow?.createdByDiscordId ?? null,
+      },
+      cohort: activeCohort
+        ? {
+            id: activeCohort.id,
+            name: activeCohort.cohortName,
+            startDate: activeCohort.cohortStartDate,
+            endDate: activeCohort.cohortEndDate,
+            supportDiscordIds: activeCohort.supportDiscordIds,
+          }
+        : null,
+      permissions: {
+        canManageDeadline: canManageDeadlineByRole(session?.user?.staffRole ?? null),
+      },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -417,6 +587,15 @@ export async function PUT(request: Request) {
   try {
     const { prisma } = await import("@/lib/prisma");
     const roster = await loadRoster();
+    const settingsRow = await loadPromotionSettings();
+    const votingDeadlineIso = settingsRow?.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
+
+    if (votingDeadlineIso && votingDeadlineIso.getTime() <= Date.now()) {
+      return NextResponse.json(
+        { error: "El plazo de votacion ya finalizo. La votacion esta cerrada." },
+        { status: 409 }
+      );
+    }
 
     if (!roster.supports.some((support) => support.id === supportDiscordId)) {
       return NextResponse.json({ error: "El miembro no pertenece al rango Support" }, { status: 400 });
@@ -462,6 +641,53 @@ export async function PUT(request: Request) {
     `;
 
     return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions);
+  const sessionUser = session?.user;
+
+  if (!sessionUser?.id || !canManageDeadlineByRole(sessionUser.staffRole ?? null)) {
+    return NextResponse.json({ error: "Solo Support Lead puede gestionar el plazo." }, { status: 403 });
+  }
+
+  let body: PromotionSettingsUpdateBody;
+  try {
+    body = (await request.json()) as PromotionSettingsUpdateBody;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
+
+  const rawDeadline = body.votingDeadlineIso;
+  let nextDeadline: Date | null = null;
+
+  if (typeof rawDeadline === "string" && rawDeadline.trim().length > 0) {
+    const parsed = new Date(rawDeadline);
+    if (Number.isNaN(parsed.getTime())) {
+      return NextResponse.json({ error: "Fecha limite invalida" }, { status: 400 });
+    }
+
+    nextDeadline = parsed;
+  }
+
+  try {
+    await updatePromotionSettings({
+      votingDeadlineIso: nextDeadline,
+      createdByDiscordId: sessionUser.discordUserId ?? null,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      voting: {
+        deadlineIso: nextDeadline ? nextDeadline.toISOString() : null,
+        isClosed: Boolean(nextDeadline && nextDeadline.getTime() <= Date.now()),
+        managedByDiscordId: sessionUser.discordUserId ?? null,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 502 });

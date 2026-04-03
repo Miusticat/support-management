@@ -23,6 +23,7 @@ type SupportEvaluation = {
   averageScore: number | null;
   decision: "Pasa" | "No Pasa" | "Pendiente";
   pendingEvaluators: string[];
+  autoAveragedMissingVotes: number;
   evaluations: Array<{
     evaluatorName: string;
     score: number;
@@ -58,6 +59,20 @@ type SupportEvaluation = {
   };
 };
 
+type VotingState = {
+  deadlineIso: string | null;
+  isClosed: boolean;
+  managedByDiscordId: string | null;
+};
+
+type PromotionCohort = {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  supportDiscordIds: string[];
+};
+
 type Evaluator = {
   id: string;
   displayName: string;
@@ -67,6 +82,11 @@ type Evaluator = {
 type ApiResponse = {
   supports?: SupportEvaluation[];
   evaluators?: Evaluator[];
+  voting?: VotingState;
+  cohort?: PromotionCohort | null;
+  permissions?: {
+    canManageDeadline?: boolean;
+  };
   error?: string;
 };
 
@@ -135,9 +155,11 @@ function formatDateTime(value: string) {
 function buildPromotionReport(input: {
   supports: SupportEvaluation[];
   evaluators: Evaluator[];
+  voting: VotingState;
+  cohort: PromotionCohort | null;
   generatedAt: Date;
 }) {
-  const { supports, evaluators, generatedAt } = input;
+  const { supports, evaluators, voting, cohort, generatedAt } = input;
   const lines: string[] = [];
 
   lines.push("# Informe de Evaluacion de Ascenso");
@@ -145,6 +167,11 @@ function buildPromotionReport(input: {
   lines.push(`Generado: ${generatedAt.toLocaleString("es-ES")}`);
   lines.push(`Evaluadores activos: ${evaluators.map((item) => item.displayName).join(", ") || "Sin evaluadores"}`);
   lines.push(`Total de supports evaluados: ${supports.length}`);
+  lines.push(`Plazo de votacion: ${voting.deadlineIso ? formatDateTime(voting.deadlineIso) : "Sin fecha limite"}`);
+  lines.push(`Estado de votacion: ${voting.isClosed ? "Cerrada" : "Abierta"}`);
+  if (cohort) {
+    lines.push(`Camada activa: ${cohort.name} (${cohort.startDate} -> ${cohort.endDate})`);
+  }
   lines.push("");
 
   for (const support of supports) {
@@ -164,6 +191,9 @@ function buildPromotionReport(input: {
     lines.push(`Aprueban: ${approvingEvaluators.length > 0 ? approvingEvaluators.join(", ") : "Nadie"}`);
     lines.push(`No aprueban: ${rejectingEvaluators.length > 0 ? rejectingEvaluators.join(", ") : "Nadie"}`);
     lines.push(`Pendientes: ${support.pendingEvaluators.length > 0 ? support.pendingEvaluators.join(", ") : "Sin pendientes"}`);
+    if (support.autoAveragedMissingVotes > 0) {
+      lines.push(`Votos faltantes promediados automaticamente: ${support.autoAveragedMissingVotes}`);
+    }
     lines.push(
       `Sanciones: ${support.sanctionsSummary.total} registro(s)${
         support.sanctionsSummary.hasSanctions
@@ -219,6 +249,15 @@ export function PromotionEvaluationPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [votingState, setVotingState] = useState<VotingState>({
+    deadlineIso: null,
+    isClosed: false,
+    managedByDiscordId: null,
+  });
+  const [cohort, setCohort] = useState<PromotionCohort | null>(null);
+  const [canManageDeadline, setCanManageDeadline] = useState(false);
+  const [deadlineDraft, setDeadlineDraft] = useState("");
+  const [savingDeadline, setSavingDeadline] = useState(false);
 
   async function loadData(showLoading: boolean) {
     if (showLoading) {
@@ -240,9 +279,18 @@ export function PromotionEvaluationPanel() {
 
       const nextSupports = Array.isArray(data?.supports) ? data.supports : [];
       const nextEvaluators = Array.isArray(data?.evaluators) ? data.evaluators : [];
+      const nextVoting = data?.voting ?? {
+        deadlineIso: null,
+        isClosed: false,
+        managedByDiscordId: null,
+      };
 
       setSupports(nextSupports);
       setEvaluators(nextEvaluators);
+      setVotingState(nextVoting);
+      setCohort(data?.cohort ?? null);
+      setCanManageDeadline(Boolean(data?.permissions?.canManageDeadline));
+      setDeadlineDraft(nextVoting.deadlineIso ? nextVoting.deadlineIso.slice(0, 16) : "");
 
       setScoreDraft((prev) => {
         const next = { ...prev };
@@ -389,6 +437,8 @@ export function PromotionEvaluationPanel() {
     const reportContent = buildPromotionReport({
       supports,
       evaluators,
+      voting: votingState,
+      cohort,
       generatedAt: new Date(),
     });
 
@@ -406,7 +456,45 @@ export function PromotionEvaluationPanel() {
     setTimeout(() => setMessage(null), 2500);
   }
 
+  async function saveVotingDeadline() {
+    setSavingDeadline(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/discord/promotion-evaluations", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          votingDeadlineIso: deadlineDraft ? new Date(deadlineDraft).toISOString() : null,
+        }),
+      });
+
+      const data = await parseJsonSafe<{ ok?: boolean; error?: string }>(response);
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "No se pudo guardar la fecha limite");
+      }
+
+      setMessage("Fecha limite de votacion actualizada.");
+      setTimeout(() => setMessage(null), 2600);
+      await loadData(false);
+    } catch (deadlineError) {
+      const deadlineMessage = deadlineError instanceof Error ? deadlineError.message : "Error desconocido";
+      setMessage(deadlineMessage);
+      setTimeout(() => setMessage(null), 2800);
+    } finally {
+      setSavingDeadline(false);
+    }
+  }
+
   async function saveEvaluation(supportId: string) {
+    if (votingState.isClosed) {
+      setMessage("La votacion esta cerrada porque ya vencio el plazo.");
+      setTimeout(() => setMessage(null), 2600);
+      return;
+    }
+
     const score = clampScore(scoreDraft[supportId] ?? 7);
     const notes = (notesDraft[supportId] ?? "").trim();
 
@@ -539,6 +627,59 @@ export function PromotionEvaluationPanel() {
           Completadas: {finalizedSupports}/{totalSupports} ({completionPercent}%) · No aprueban: {failedSupports} · Promedio global: {Number.isFinite(averageCompletedScore) ? averageCompletedScore.toFixed(2) : "-"}/10
         </p>
 
+        <div className="relative z-10 mt-4 grid gap-3 xl:grid-cols-2">
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Plazo de votacion</p>
+            <p className="mt-1 text-sm text-[var(--color-neutral-white)]">
+              {votingState.deadlineIso ? formatDateTime(votingState.deadlineIso) : "Sin fecha limite"}
+            </p>
+            <p className={`mt-1 text-[11px] ${votingState.isClosed ? "text-[var(--color-accent-red)]" : "text-[var(--color-neutral-grey)]"}`}>
+              {votingState.isClosed
+                ? "Votacion cerrada: los votos faltantes se promedian automaticamente con el resto del equipo."
+                : "Votacion abierta. Al finalizar el plazo, la votacion se cerrara automaticamente."}
+            </p>
+            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+              Cumplir con los tiempos establecidos es parte de nuestra responsabilidad dentro del staff.
+            </p>
+
+            {canManageDeadline ? (
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="datetime-local"
+                  value={deadlineDraft}
+                  onChange={(e) => setDeadlineDraft(e.target.value)}
+                  className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-xs text-[var(--color-neutral-white)] outline-none focus:border-[#ffac00]/40"
+                />
+                <button
+                  type="button"
+                  onClick={() => void saveVotingDeadline()}
+                  disabled={savingDeadline}
+                  className="rounded-md border border-[#ffac00]/40 bg-[#ffac00]/15 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#ffac00] transition hover:bg-[#ffac00]/25 disabled:opacity-50"
+                >
+                  {savingDeadline ? "Guardando..." : "Guardar plazo"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Camada activa</p>
+            {cohort ? (
+              <>
+                <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">{cohort.name}</p>
+                <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+                  Ingreso: {cohort.startDate} · Finalizacion: {cohort.endDate}
+                </p>
+                <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+                  Supports de esta camada: {cohort.supportDiscordIds.length}
+                </p>
+              </>
+            ) : (
+              <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">Sin camada registrada.</p>
+            )}
+          </div>
+        </div>
+
         {message ? (
           <p className="relative z-10 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs text-[var(--color-neutral-grey)]">
             {message}
@@ -662,6 +803,12 @@ export function PromotionEvaluationPanel() {
                         <p className="text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]">Puntos positivos</p>
                         <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
                           {selectedSupport.positivePointsSummary.totalPoints}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]">Votos promediados</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
+                          {selectedSupport.autoAveragedMissingVotes}
                         </p>
                       </div>
                     </div>
@@ -833,10 +980,14 @@ export function PromotionEvaluationPanel() {
                           <button
                             type="button"
                             onClick={() => saveEvaluation(selectedSupport.id)}
-                            disabled={savingId === selectedSupport.id}
+                            disabled={savingId === selectedSupport.id || votingState.isClosed}
                             className="w-full rounded-lg border border-[#ffac00]/40 bg-[#ffac00]/20 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#ffac00] transition-all hover:border-[#ffac00]/60 hover:bg-[#ffac00]/30 disabled:opacity-50"
                           >
-                            {savingId === selectedSupport.id ? "Guardando evaluación..." : "Guardar evaluación"}
+                            {savingId === selectedSupport.id
+                              ? "Guardando evaluación..."
+                              : votingState.isClosed
+                                ? "Votación cerrada"
+                                : "Guardar evaluación"}
                           </button>
 
                         </>
