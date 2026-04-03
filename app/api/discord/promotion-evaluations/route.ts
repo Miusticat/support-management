@@ -30,6 +30,16 @@ type SupportSanctionRow = {
   createdAt: Date;
 };
 
+type SupportPositivePointRow = {
+  supportDiscordId: string;
+  pointType: string;
+  pointValue: number;
+  fecha: string;
+  justificacion: string;
+  observaciones: string | null;
+  createdAt: Date;
+};
+
 type EvaluationRequestBody = {
   supportDiscordId?: string;
   score?: number;
@@ -147,6 +157,23 @@ async function loadSupportSanctions() {
   `;
 }
 
+async function loadSupportPositivePoints() {
+  const { prisma } = await import("@/lib/prisma");
+
+  return prisma.$queryRaw<SupportPositivePointRow[]>`
+    SELECT
+      "supportDiscordId",
+      "pointType",
+      "pointValue",
+      "fecha",
+      "justificacion",
+      "observaciones",
+      "createdAt"
+    FROM "StaffPositivePoints"
+    ORDER BY "createdAt" DESC
+  `;
+}
+
 async function loadRoster() {
   const guildId = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
@@ -226,15 +253,17 @@ export async function GET() {
   }
 
   try {
-    const [roster, rows, sanctionRows] = await Promise.all([
+    const [roster, rows, sanctionRows, positivePointRows] = await Promise.all([
       loadRoster(),
       loadEvaluations(),
       loadSupportSanctions(),
+      loadSupportPositivePoints(),
     ]);
     const requiredEvaluations = roster.evaluators.length;
 
     const rowsBySupport = new Map<string, EvaluationRow[]>();
     const sanctionsBySupport = new Map<string, SupportSanctionRow[]>();
+    const positivePointsBySupport = new Map<string, SupportPositivePointRow[]>();
 
     for (const row of rows) {
       const currentRows = rowsBySupport.get(row.supportDiscordId) ?? [];
@@ -248,13 +277,24 @@ export async function GET() {
       sanctionsBySupport.set(sanctionRow.supportDiscordId, currentRows);
     }
 
+    for (const positivePointRow of positivePointRows) {
+      const currentRows = positivePointsBySupport.get(positivePointRow.supportDiscordId) ?? [];
+      currentRows.push(positivePointRow);
+      positivePointsBySupport.set(positivePointRow.supportDiscordId, currentRows);
+    }
+
     const supports = roster.supports.map((support) => {
       const supportRows = rowsBySupport.get(support.id) ?? [];
       const supportSanctions = sanctionsBySupport.get(support.id) ?? [];
+      const supportPositivePoints = positivePointsBySupport.get(support.id) ?? [];
       const completed = supportRows.length;
       const totalScore = supportRows.reduce((sum, row) => sum + row.score, 0);
       const average = completed > 0 ? Number((totalScore / completed).toFixed(2)) : null;
       const allEvaluated = requiredEvaluations > 0 && completed >= requiredEvaluations;
+      const totalPositivePoints = supportPositivePoints.reduce(
+        (sum, row) => sum + Number(row.pointValue ?? 0),
+        0
+      );
 
       const evaluatorIds = new Set(supportRows.map((row) => row.evaluatorDiscordId));
       const pendingEvaluators = roster.evaluators
@@ -306,6 +346,28 @@ export async function GET() {
                   appliedSanction: sanction.appliedSanction,
                   fecha: sanction.fecha,
                   motivo: sanction.motivo,
+                })),
+              },
+        positivePointsSummary:
+          supportPositivePoints.length === 0
+            ? {
+                hasPositivePoints: false,
+                totalRecords: 0,
+                totalPoints: 0,
+                text: "Sin puntos positivos registrados.",
+                latest: [],
+              }
+            : {
+                hasPositivePoints: true,
+                totalRecords: supportPositivePoints.length,
+                totalPoints: Number(totalPositivePoints.toFixed(2)),
+                text: `${supportPositivePoints.length} registro(s), ${Number(totalPositivePoints.toFixed(2))} punto(s) acumulado(s).`,
+                latest: supportPositivePoints.slice(0, 5).map((point) => ({
+                  pointType: point.pointType,
+                  pointValue: Number(point.pointValue),
+                  fecha: point.fecha,
+                  justificacion: point.justificacion,
+                  observaciones: point.observaciones,
                 })),
               },
       };
