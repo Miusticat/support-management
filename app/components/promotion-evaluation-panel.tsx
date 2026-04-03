@@ -57,6 +57,9 @@ type SupportEvaluation = {
       observaciones: string | null;
     }>;
   };
+  cutStatus: "aprobado_corte_1" | "rechazado_corte_1_en_mejora" | "pendiente_corte_1" | "aprobado_corte_2" | "rechazado_corte_2_retiro" | "pendiente_corte_2" | "sin_cortes";
+  activeCutNumber: 0 | 1 | 2;
+  inImprovementPeriod: boolean;
 };
 
 type VotingState = {
@@ -73,6 +76,16 @@ type PromotionCohort = {
   supportDiscordIds: string[];
 };
 
+type PromotionCcut = {
+  id: string;
+  cutNumber: number;
+  targetRank: string;
+  state: string;
+  startDateIso: string | null;
+  endDateIso: string | null;
+  improvementPeriodEndIso: string | null;
+};
+
 type Evaluator = {
   id: string;
   displayName: string;
@@ -84,6 +97,10 @@ type ApiResponse = {
   evaluators?: Evaluator[];
   voting?: VotingState;
   cohort?: PromotionCohort | null;
+  cuts?: {
+    cut1: PromotionCcut | null;
+    cut2: PromotionCcut | null;
+  };
   permissions?: {
     canManageDeadline?: boolean;
   };
@@ -258,6 +275,10 @@ export function PromotionEvaluationPanel() {
   const [canManageDeadline, setCanManageDeadline] = useState(false);
   const [deadlineDraft, setDeadlineDraft] = useState("");
   const [savingDeadline, setSavingDeadline] = useState(false);
+  const [cuts, setCuts] = useState<{ cut1: PromotionCcut | null; cut2: PromotionCcut | null }>({
+    cut1: null,
+    cut2: null,
+  });
 
   async function loadData(showLoading: boolean) {
     if (showLoading) {
@@ -289,6 +310,12 @@ export function PromotionEvaluationPanel() {
       setEvaluators(nextEvaluators);
       setVotingState(nextVoting);
       setCohort(data?.cohort ?? null);
+      setCuts(
+        data?.cuts ?? {
+          cut1: null,
+          cut2: null,
+        }
+      );
       setCanManageDeadline(Boolean(data?.permissions?.canManageDeadline));
       setDeadlineDraft(nextVoting.deadlineIso ? nextVoting.deadlineIso.slice(0, 16) : "");
 
@@ -678,6 +705,39 @@ export function PromotionEvaluationPanel() {
               <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">Sin camada registrada.</p>
             )}
           </div>
+
+          {cuts.cut1 || cuts.cut2 ? (
+            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Cortes de promocion</p>
+              {cuts.cut1 ? (
+                <div className="mt-2 rounded-md border border-[#3b82f6]/30 bg-[#3b82f6]/10 p-2">
+                  <p className="text-[11px] font-semibold text-[#60a5fa]">Corte 1: {cuts.cut1.targetRank}</p>
+                  {cuts.cut1.startDateIso && cuts.cut1.endDateIso ? (
+                    <p className="text-[10px] text-[#93c5fd]">
+                      {new Date(cuts.cut1.startDateIso).toLocaleDateString("es-ES")} al{" "}
+                      {new Date(cuts.cut1.endDateIso).toLocaleDateString("es-ES")}
+                    </p>
+                  ) : null}
+                  {cuts.cut1.improvementPeriodEndIso ? (
+                    <p className="text-[10px] text-[#93c5fd]">
+                      Mejora hasta: {new Date(cuts.cut1.improvementPeriodEndIso).toLocaleDateString("es-ES")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+              {cuts.cut2 ? (
+                <div className="mt-2 rounded-md border border-[#8b5cf6]/30 bg-[#8b5cf6]/10 p-2">
+                  <p className="text-[11px] font-semibold text-[#c084fc]">Corte 2: {cuts.cut2.targetRank}</p>
+                  {cuts.cut2.startDateIso && cuts.cut2.endDateIso ? (
+                    <p className="text-[10px] text-[#d8b4fe]">
+                      {new Date(cuts.cut2.startDateIso).toLocaleDateString("es-ES")} al{" "}
+                      {new Date(cuts.cut2.endDateIso).toLocaleDateString("es-ES")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {message ? (
@@ -813,6 +873,49 @@ export function PromotionEvaluationPanel() {
                       </div>
                     </div>
                   </div>
+
+                  {selectedSupport.cutStatus && selectedSupport.cutStatus !== "sin_cortes" ? (
+                    <div className="mt-4 space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Estado de cortes</p>
+                      <div className="space-y-2">
+                        <div
+                          className={`rounded-md border px-3 py-2 text-[11px] font-medium ${
+                            selectedSupport.cutStatus.startsWith("aprobado_corte_1")
+                              ? "border-[#34d399]/40 bg-[#34d399]/12 text-[#34d399]"
+                              : selectedSupport.cutStatus === "rechazado_corte_1_en_mejora"
+                                ? "border-[#facc15]/40 bg-[#facc15]/12 text-[#facc15]"
+                                : selectedSupport.cutStatus === "pendiente_corte_1"
+                                  ? "border-[#64748b]/40 bg-[#64748b]/12 text-[#cbd5e1]"
+                                  : selectedSupport.cutStatus.startsWith("aprobado_corte_2")
+                                    ? "border-[#10b981]/40 bg-[#10b981]/12 text-[#10b981]"
+                                    : selectedSupport.cutStatus === "rechazado_corte_2_retiro"
+                                      ? "border-[#ef4444]/40 bg-[#ef4444]/12 text-[#ef4444]"
+                                      : "border-[#64748b]/40 bg-[#64748b]/12 text-[#cbd5e1]"
+                          }`}
+                        >
+                          {selectedSupport.cutStatus === "aprobado_corte_1"
+                            ? "✓ Aprobó Corte 1"
+                            : selectedSupport.cutStatus === "rechazado_corte_1_en_mejora"
+                              ? "⚠ Rechazó Corte 1 - Período de mejora"
+                              : selectedSupport.cutStatus === "pendiente_corte_1"
+                                ? "○ Pendiente Corte 1"
+                                : selectedSupport.cutStatus === "aprobado_corte_2"
+                                  ? "✓ Aprobó Corte 2"
+                                  : selectedSupport.cutStatus === "rechazado_corte_2_retiro"
+                                    ? "✗ Rechazó Corte 2 - Retiro"
+                                    : "○ Pendiente Corte 2"}
+                        </div>
+                        {selectedSupport.inImprovementPeriod ? (
+                          <div className="rounded-md border border-[#facc15]/40 bg-[#facc15]/12 px-3 py-2 flex items-center gap-2">
+                            <Clock3 className="h-4 w-4 text-[#facc15] shrink-0" />
+                            <p className="text-[10px] text-[#facc15]">
+                              En período de mejora · Próximo corte: Corte 2
+                            </p>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
 
                   {activePanel !== "evaluate" ? (
                     <div className="mt-4 space-y-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">

@@ -67,6 +67,30 @@ type PromotionEvaluationCohortRow = {
   updatedAt: Date;
 };
 
+type PromotionCohortCutRow = {
+  id: string;
+  cohortId: string;
+  cutNumber: number;
+  targetRank: string;
+  state: "pending" | "in_progress" | "completed";
+  startDateIso: Date;
+  endDateIso: Date | null;
+  improvementPeriodEndIso: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type PromotionCutEvaluationRow = {
+  supportDiscordId: string;
+  cohortId: string;
+  cutNumber: number;
+  result: "pass" | "fail" | null;
+  resultAt: Date | null;
+  nextAction: "promoted" | "improvement_period" | "retiro" | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 function canEvaluateByRole(roleName: string | null | undefined) {
   return roleName === "Support Lead" || roleName === "Support Trainer";
 }
@@ -267,6 +291,117 @@ async function loadActiveCohort() {
   return rows[0] ?? null;
 }
 
+async function ensurePromotionCohortCutTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PromotionCohortCut" (
+      "id" TEXT PRIMARY KEY,
+      "cohortId" TEXT NOT NULL,
+      "cutNumber" INTEGER NOT NULL,
+      "targetRank" TEXT NOT NULL,
+      "state" TEXT NOT NULL DEFAULT 'pending',
+      "startDateIso" TIMESTAMP(3) NOT NULL,
+      "endDateIso" TIMESTAMP(3),
+      "improvementPeriodEndIso" TIMESTAMP(3),
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE ("cohortId", "cutNumber")
+    )
+  `);
+}
+
+async function ensurePromotionCutEvaluationTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PromotionCutEvaluation" (
+      "supportDiscordId" TEXT NOT NULL,
+      "cohortId" TEXT NOT NULL,
+      "cutNumber" INTEGER NOT NULL,
+      "result" TEXT,
+      "resultAt" TIMESTAMP(3),
+      "nextAction" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY ("supportDiscordId", "cohortId", "cutNumber")
+    )
+  `);
+}
+
+async function initializeCohortCuts(cohortId: string) {
+  const { prisma } = await import("@/lib/prisma");
+  await ensurePromotionCohortCutTable();
+
+  const now = new Date();
+  const cut1EndDate = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const improvementEnd = new Date(cut1EndDate.getTime() + 15 * 24 * 60 * 60 * 1000);
+  const cut2EndDate = new Date(improvementEnd.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+  await prisma.$executeRaw`
+    INSERT INTO "PromotionCohortCut" (
+      "id",
+      "cohortId",
+      "cutNumber",
+      "targetRank",
+      "state",
+      "startDateIso",
+      "endDateIso",
+      "improvementPeriodEndIso",
+      "updatedAt"
+    ) VALUES 
+      (${"cut-" + cohortId + "-1"}, ${cohortId}, 1, ${"Trial Admin"}, ${"pending"}, ${now}, ${cut1EndDate}, ${improvementEnd}, NOW()),
+      (${"cut-" + cohortId + "-2"}, ${cohortId}, 2, ${"Game Admin Level 1"}, ${"pending"}, ${improvementEnd}, ${cut2EndDate}, NULL, NOW())
+    ON CONFLICT ("cohortId", "cutNumber") DO NOTHING
+  `;
+}
+
+async function loadActiveCohortCut(cohortId: string, cutNumber: number) {
+  const { prisma } = await import("@/lib/prisma");
+  await ensurePromotionCohortCutTable();
+
+  const rows = await prisma.$queryRaw<PromotionCohortCutRow[]>`
+    SELECT
+      "id",
+      "cohortId",
+      "cutNumber",
+      "targetRank",
+      "state",
+      "startDateIso",
+      "endDateIso",
+      "improvementPeriodEndIso",
+      "createdAt",
+      "updatedAt"
+    FROM "PromotionCohortCut"
+    WHERE "cohortId" = ${cohortId} AND "cutNumber" = ${cutNumber}
+    LIMIT 1
+  `;
+
+  return rows[0] ?? null;
+}
+
+async function loadSupportCutEvaluation(supportDiscordId: string, cohortId: string, cutNumber: number) {
+  const { prisma } = await import("@/lib/prisma");
+  await ensurePromotionCutEvaluationTable();
+
+  const rows = await prisma.$queryRaw<PromotionCutEvaluationRow[]>`
+    SELECT
+      "supportDiscordId",
+      "cohortId",
+      "cutNumber",
+      "result",
+      "resultAt",
+      "nextAction",
+      "createdAt",
+      "updatedAt"
+    FROM "PromotionCutEvaluation"
+    WHERE "supportDiscordId" = ${supportDiscordId} AND "cohortId" = ${cohortId} AND "cutNumber" = ${cutNumber}
+    LIMIT 1
+  `;
+
+  return rows[0] ?? null;
+}
+
 async function loadEvaluations() {
   const { prisma } = await import("@/lib/prisma");
   await ensureEvaluationTable();
@@ -404,6 +539,11 @@ export async function GET() {
       loadPromotionSettings(),
       loadActiveCohort(),
     ]);
+
+    if (activeCohort) {
+      await initializeCohortCuts(activeCohort.id);
+    }
+
     const effectiveRoster = roster;
     const requiredEvaluations = effectiveRoster.evaluators.length;
     const votingDeadlineIso = settingsRow?.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
@@ -431,7 +571,14 @@ export async function GET() {
       positivePointsBySupport.set(positivePointRow.supportDiscordId, currentRows);
     }
 
-    const supports = effectiveRoster.supports.map((support) => {
+    const [cut1, cut2] = activeCohort
+      ? await Promise.all([
+          loadActiveCohortCut(activeCohort.id, 1),
+          loadActiveCohortCut(activeCohort.id, 2),
+        ])
+      : [null, null];
+
+    const supports = effectiveRoster.supports.map(async (support) => {
       const supportRows = rowsBySupport.get(support.id) ?? [];
       const supportSanctions = sanctionsBySupport.get(support.id) ?? [];
       const supportPositivePoints = positivePointsBySupport.get(support.id) ?? [];
@@ -456,6 +603,13 @@ export async function GET() {
       const myEvaluation = supportRows.find(
         (row) => row.evaluatorDiscordId === session?.user?.discordUserId
       );
+
+      const cut1Eval = activeCohort ? await loadSupportCutEvaluation(support.id, activeCohort.id, 1) : null;
+      const cut2Eval = activeCohort ? await loadSupportCutEvaluation(support.id, activeCohort.id, 2) : null;
+      const now = new Date();
+      const inImprovementPeriod = cut1 && cut1.improvementPeriodEndIso && now.getTime() < new Date(cut1.improvementPeriodEndIso).getTime() && cut1Eval?.result === "fail";
+      const activeCutNumber = cut1 && now.getTime() < new Date(cut1.endDateIso ?? '2099-12-31').getTime() ? 1 : cut2 && now.getTime() < new Date(cut2.endDateIso ?? '2099-12-31').getTime() ? 2 : 0;
+      const cutStatus = activeCutNumber === 1 ? cut1Eval?.result === "pass" ? "aprobado_corte_1" : cut1Eval ? "rechazado_corte_1_en_mejora" : "pendiente_corte_1" : activeCutNumber === 2 ? cut2Eval?.result === "pass" ? "aprobado_corte_2" : cut2Eval?.result === "fail" ? "rechazado_corte_2_retiro" : "pendiente_corte_2" : "sin_cortes";
 
       return {
         id: support.id,
@@ -523,11 +677,16 @@ export async function GET() {
                   observaciones: point.observaciones,
                 })),
               },
+        cutStatus,
+        activeCutNumber,
+        inImprovementPeriod: Boolean(inImprovementPeriod),
       };
     });
 
+    const supportsResolved = await Promise.all(supports);
+
     return NextResponse.json({
-      supports,
+      supports: supportsResolved,
       evaluators: effectiveRoster.evaluators,
       voting: {
         deadlineIso: votingDeadlineIso ? votingDeadlineIso.toISOString() : null,
@@ -543,6 +702,30 @@ export async function GET() {
             supportDiscordIds: activeCohort.supportDiscordIds,
           }
         : null,
+      cuts: {
+        cut1: cut1
+          ? {
+              id: cut1.id,
+              cutNumber: cut1.cutNumber,
+              targetRank: cut1.targetRank,
+              state: cut1.state,
+              startDateIso: cut1.startDateIso?.toISOString() ?? null,
+              endDateIso: cut1.endDateIso?.toISOString() ?? null,
+              improvementPeriodEndIso: cut1.improvementPeriodEndIso?.toISOString() ?? null,
+            }
+          : null,
+        cut2: cut2
+          ? {
+              id: cut2.id,
+              cutNumber: cut2.cutNumber,
+              targetRank: cut2.targetRank,
+              state: cut2.state,
+              startDateIso: cut2.startDateIso?.toISOString() ?? null,
+              endDateIso: cut2.endDateIso?.toISOString() ?? null,
+              improvementPeriodEndIso: cut2.improvementPeriodEndIso?.toISOString() ?? null,
+            }
+          : null,
+      },
       permissions: {
         canManageDeadline: canManageDeadlineByRole(session?.user?.staffRole ?? null),
       },
