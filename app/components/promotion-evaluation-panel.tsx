@@ -204,6 +204,25 @@ function formatDateTime(value: string) {
   });
 }
 
+function formatCountdown(targetIso: string, nowMs: number) {
+  const targetMs = new Date(targetIso).getTime();
+  if (Number.isNaN(targetMs)) {
+    return "Fecha invalida";
+  }
+
+  const diffMs = targetMs - nowMs;
+  if (diffMs <= 0) {
+    return "Cerrada";
+  }
+
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  return `${days}d ${hours}h ${minutes}m`;
+}
+
 function buildPromotionReport(input: {
   supports: SupportEvaluation[];
   evaluators: Evaluator[];
@@ -317,6 +336,7 @@ export function PromotionEvaluationPanel() {
   const [canManageDeadline, setCanManageDeadline] = useState(false);
   const [deadlineDraft, setDeadlineDraft] = useState("");
   const [savingDeadline, setSavingDeadline] = useState(false);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [cuts, setCuts] = useState<{ cut1: PromotionCcut | null; cut2: PromotionCcut | null }>({
     cut1: null,
     cut2: null,
@@ -435,6 +455,16 @@ export function PromotionEvaluationPanel() {
   }, [supports, selectedSupportId]);
 
   useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 30000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!secondEvaluation.enabled || secondEvaluation.supports.length === 0) {
       setSelectedSecondSupportId("");
       return;
@@ -526,6 +556,10 @@ export function PromotionEvaluationPanel() {
     () => secondEvaluation.supports.find((support) => support.id === selectedSecondSupportId) ?? null,
     [secondEvaluation.supports, selectedSecondSupportId]
   );
+  const secondEvaluationCountdown =
+    secondEvaluation.enabled && votingState.deadlineIso
+      ? formatCountdown(votingState.deadlineIso, nowMs)
+      : null;
 
   const selectedScore = selectedSupport ? scoreDraft[selectedSupport.id] ?? 7 : 7;
   const selectedZone = getScoreZone(selectedScore);
@@ -1204,7 +1238,11 @@ export function PromotionEvaluationPanel() {
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-[#fbbf24]">Segunda evaluación</p>
                     <h3 className="mt-1 text-base font-semibold text-[var(--color-neutral-white)]">Supports que no pasaron el cierre inicial</h3>
                     <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
-                      Aquí se reinicia la evaluación desde cero para todos los evaluadores. Se conserva visible el puntaje y comentarios de la ronda anterior.
+                      Segunda evaluación activa: vuelve a calificar desde cero y revisa el historial de la ronda anterior antes de emitir tu voto.
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
+                      Cierre segunda evaluación: {votingState.deadlineIso ? formatDateTime(votingState.deadlineIso) : "Sin fecha limite"}
+                      {secondEvaluationCountdown ? ` · Cuenta regresiva: ${secondEvaluationCountdown}` : ""}
                     </p>
                   </div>
                   <span className="rounded-md border border-[#f59e0b]/35 bg-[#f59e0b]/12 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#fbbf24]">
@@ -1255,6 +1293,9 @@ export function PromotionEvaluationPanel() {
                             </p>
                             <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
                               Ronda anterior: promedio {selectedSecondSupport.previousRound.averageScore !== null ? selectedSecondSupport.previousRound.averageScore.toFixed(2) : "-"}/10 · evaluaciones {selectedSecondSupport.previousRound.completedEvaluations}
+                            </p>
+                            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+                              Faltan por votar: {selectedSecondSupport.pendingEvaluators.length > 0 ? selectedSecondSupport.pendingEvaluators.join(", ") : "Sin pendientes"}
                             </p>
                           </div>
 
