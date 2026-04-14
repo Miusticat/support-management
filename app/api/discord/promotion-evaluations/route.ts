@@ -44,6 +44,7 @@ type EvaluationRequestBody = {
   supportDiscordId?: string;
   score?: number;
   notes?: string;
+  stage?: "first" | "second";
 };
 
 type PromotionSettingsUpdateBody = {
@@ -54,6 +55,8 @@ type PromotionEvaluationSettingsRow = {
   id: number;
   votingDeadlineIso: Date | null;
   createdByDiscordId: string | null;
+  secondEvaluationEnabled: boolean;
+  closeProcessedAt: Date | null;
   updatedAt: Date;
 };
 
@@ -88,6 +91,32 @@ type PromotionCutEvaluationRow = {
   resultAt: Date | null;
   nextAction: "promoted" | "improvement_period" | "retiro" | null;
   createdAt: Date;
+  updatedAt: Date;
+};
+
+type SecondEvaluationCandidateRow = {
+  supportDiscordId: string;
+  previousAverageScore: number | null;
+  previousCompletedEvaluations: number;
+  movedAt: Date;
+  updatedAt: Date;
+};
+
+type SecondEvaluationRow = {
+  supportDiscordId: string;
+  evaluatorDiscordId: string;
+  evaluatorName: string;
+  score: number;
+  notes: string | null;
+  updatedAt: Date;
+};
+
+type FirstRoundHistoryRow = {
+  supportDiscordId: string;
+  evaluatorDiscordId: string;
+  evaluatorName: string;
+  score: number;
+  notes: string | null;
   updatedAt: Date;
 };
 
@@ -183,8 +212,20 @@ async function ensurePromotionSettingsTable() {
       "id" INTEGER PRIMARY KEY,
       "votingDeadlineIso" TIMESTAMP(3),
       "createdByDiscordId" TEXT,
+      "secondEvaluationEnabled" BOOLEAN NOT NULL DEFAULT FALSE,
+      "closeProcessedAt" TIMESTAMP(3),
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "PromotionEvaluationSettings"
+    ADD COLUMN IF NOT EXISTS "secondEvaluationEnabled" BOOLEAN NOT NULL DEFAULT FALSE
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "PromotionEvaluationSettings"
+    ADD COLUMN IF NOT EXISTS "closeProcessedAt" TIMESTAMP(3)
   `);
 
   await prisma.$executeRawUnsafe(`
@@ -244,6 +285,8 @@ async function loadPromotionSettings() {
       "id",
       "votingDeadlineIso",
       "createdByDiscordId",
+      "secondEvaluationEnabled",
+      "closeProcessedAt",
       "updatedAt"
     FROM "PromotionEvaluationSettings"
     WHERE "id" = 1
@@ -251,6 +294,206 @@ async function loadPromotionSettings() {
   `;
 
   return rows[0] ?? null;
+}
+
+async function ensureSecondEvaluationCandidateTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PromotionSecondEvaluationCandidate" (
+      "supportDiscordId" TEXT PRIMARY KEY,
+      "previousAverageScore" DOUBLE PRECISION,
+      "previousCompletedEvaluations" INTEGER NOT NULL DEFAULT 0,
+      "movedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function ensureSecondEvaluationTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "SupportPromotionSecondEvaluation" (
+      "supportDiscordId" TEXT NOT NULL,
+      "evaluatorDiscordId" TEXT NOT NULL,
+      "evaluatorName" TEXT NOT NULL,
+      "score" INTEGER NOT NULL,
+      "notes" TEXT,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY ("supportDiscordId", "evaluatorDiscordId")
+    )
+  `);
+}
+
+async function ensureFirstRoundHistoryTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "SupportPromotionEvaluationHistory" (
+      "supportDiscordId" TEXT NOT NULL,
+      "evaluatorDiscordId" TEXT NOT NULL,
+      "evaluatorName" TEXT NOT NULL,
+      "score" INTEGER NOT NULL,
+      "notes" TEXT,
+      "updatedAt" TIMESTAMP(3) NOT NULL,
+      "roundNumber" INTEGER NOT NULL DEFAULT 1,
+      "archivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY ("supportDiscordId", "evaluatorDiscordId", "roundNumber")
+    )
+  `);
+}
+
+async function loadSecondEvaluationCandidates() {
+  const { prisma } = await import("@/lib/prisma");
+  await ensureSecondEvaluationCandidateTable();
+
+  return prisma.$queryRaw<SecondEvaluationCandidateRow[]>`
+    SELECT
+      "supportDiscordId",
+      "previousAverageScore",
+      "previousCompletedEvaluations",
+      "movedAt",
+      "updatedAt"
+    FROM "PromotionSecondEvaluationCandidate"
+    ORDER BY "movedAt" ASC
+  `;
+}
+
+async function loadSecondEvaluations() {
+  const { prisma } = await import("@/lib/prisma");
+  await ensureSecondEvaluationTable();
+
+  return prisma.$queryRaw<SecondEvaluationRow[]>`
+    SELECT
+      "supportDiscordId",
+      "evaluatorDiscordId",
+      "evaluatorName",
+      "score",
+      "notes",
+      "updatedAt"
+    FROM "SupportPromotionSecondEvaluation"
+  `;
+}
+
+async function loadFirstRoundHistory() {
+  const { prisma } = await import("@/lib/prisma");
+  await ensureFirstRoundHistoryTable();
+
+  return prisma.$queryRaw<FirstRoundHistoryRow[]>`
+    SELECT
+      "supportDiscordId",
+      "evaluatorDiscordId",
+      "evaluatorName",
+      "score",
+      "notes",
+      "updatedAt"
+    FROM "SupportPromotionEvaluationHistory"
+    WHERE "roundNumber" = 1
+    ORDER BY "updatedAt" ASC
+  `;
+}
+
+async function processVotingClosureTransition(input: {
+  settingsRow: PromotionEvaluationSettingsRow;
+  roster: Awaited<ReturnType<typeof loadRoster>>;
+}) {
+  const { settingsRow, roster } = input;
+  const votingDeadlineIso = settingsRow.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
+  const votingClosed = Boolean(votingDeadlineIso && votingDeadlineIso.getTime() <= Date.now());
+
+  if (!votingClosed || settingsRow.closeProcessedAt) {
+    return;
+  }
+
+  const { prisma } = await import("@/lib/prisma");
+  await ensureEvaluationTable();
+  await ensureSecondEvaluationCandidateTable();
+  await ensureSecondEvaluationTable();
+  await ensureFirstRoundHistoryTable();
+
+  const firstRoundRows = await loadEvaluations();
+  const requiredEvaluations = roster.evaluators.length;
+  const rowsBySupport = new Map<string, EvaluationRow[]>();
+
+  for (const row of firstRoundRows) {
+    const currentRows = rowsBySupport.get(row.supportDiscordId) ?? [];
+    currentRows.push(row);
+    rowsBySupport.set(row.supportDiscordId, currentRows);
+  }
+
+  for (const support of roster.supports) {
+    const supportRows = rowsBySupport.get(support.id) ?? [];
+    const completed = supportRows.length;
+    const totalScore = supportRows.reduce((sum, row) => sum + row.score, 0);
+    const average = completed > 0 ? Number((totalScore / completed).toFixed(2)) : null;
+    const allEvaluated = requiredEvaluations > 0 && completed >= requiredEvaluations;
+    const canFinalizeByDeadline = completed > 0;
+    const isFinalized = allEvaluated || canFinalizeByDeadline;
+    const passed = isFinalized && (average ?? 0) >= 7;
+
+    if (passed) {
+      continue;
+    }
+
+    await prisma.$executeRaw`
+      INSERT INTO "PromotionSecondEvaluationCandidate" (
+        "supportDiscordId",
+        "previousAverageScore",
+        "previousCompletedEvaluations",
+        "updatedAt"
+      ) VALUES (
+        ${support.id},
+        ${average},
+        ${completed},
+        NOW()
+      )
+      ON CONFLICT ("supportDiscordId") DO UPDATE
+      SET
+        "previousAverageScore" = EXCLUDED."previousAverageScore",
+        "previousCompletedEvaluations" = EXCLUDED."previousCompletedEvaluations",
+        "updatedAt" = NOW()
+    `;
+
+    for (const row of supportRows) {
+      await prisma.$executeRaw`
+        INSERT INTO "SupportPromotionEvaluationHistory" (
+          "supportDiscordId",
+          "evaluatorDiscordId",
+          "evaluatorName",
+          "score",
+          "notes",
+          "updatedAt",
+          "roundNumber"
+        ) VALUES (
+          ${row.supportDiscordId},
+          ${row.evaluatorDiscordId},
+          ${row.evaluatorName},
+          ${row.score},
+          ${row.notes},
+          ${row.updatedAt},
+          1
+        )
+        ON CONFLICT ("supportDiscordId", "evaluatorDiscordId", "roundNumber") DO NOTHING
+      `;
+    }
+
+    await prisma.$executeRaw`
+      DELETE FROM "SupportPromotionEvaluation"
+      WHERE "supportDiscordId" = ${support.id}
+    `;
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "PromotionEvaluationSettings"
+    SET
+      "secondEvaluationEnabled" = TRUE,
+      "closeProcessedAt" = NOW(),
+      "votingDeadlineIso" = NULL,
+      "updatedAt" = NOW()
+    WHERE "id" = 1
+  `;
 }
 
 async function updatePromotionSettings(input: {
@@ -532,11 +775,22 @@ export async function GET() {
     const roster = await loadRoster();
     await ensureDefaultCohort(roster.supports.map((item) => item.id));
 
-    const [rows, sanctionRows, positivePointRows, settingsRow, activeCohort] = await Promise.all([
+    let settingsRow = await loadPromotionSettings();
+    if (settingsRow) {
+      await processVotingClosureTransition({
+        settingsRow,
+        roster,
+      });
+      settingsRow = await loadPromotionSettings();
+    }
+
+    const [rows, secondEvaluationCandidates, secondEvaluationRows, firstRoundHistoryRows, sanctionRows, positivePointRows, activeCohort] = await Promise.all([
       loadEvaluations(),
+      loadSecondEvaluationCandidates(),
+      loadSecondEvaluations(),
+      loadFirstRoundHistory(),
       loadSupportSanctions(),
       loadSupportPositivePoints(),
-      loadPromotionSettings(),
       loadActiveCohort(),
     ]);
 
@@ -544,6 +798,7 @@ export async function GET() {
       await initializeCohortCuts(activeCohort.id);
     }
 
+    const secondEvaluationEnabled = Boolean(settingsRow?.secondEvaluationEnabled);
     const effectiveRoster = roster;
     const requiredEvaluations = effectiveRoster.evaluators.length;
     const votingDeadlineIso = settingsRow?.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
@@ -557,6 +812,26 @@ export async function GET() {
       const currentRows = rowsBySupport.get(row.supportDiscordId) ?? [];
       currentRows.push(row);
       rowsBySupport.set(row.supportDiscordId, currentRows);
+    }
+
+    const firstRoundSupportIds = new Set(rows.map((row) => row.supportDiscordId));
+    const supportsForFirstEvaluation = secondEvaluationEnabled
+      ? effectiveRoster.supports.filter((support) => firstRoundSupportIds.has(support.id))
+      : effectiveRoster.supports;
+
+    const secondEvaluationRowsBySupport = new Map<string, SecondEvaluationRow[]>();
+    const firstRoundHistoryBySupport = new Map<string, FirstRoundHistoryRow[]>();
+
+    for (const row of secondEvaluationRows) {
+      const currentRows = secondEvaluationRowsBySupport.get(row.supportDiscordId) ?? [];
+      currentRows.push(row);
+      secondEvaluationRowsBySupport.set(row.supportDiscordId, currentRows);
+    }
+
+    for (const row of firstRoundHistoryRows) {
+      const currentRows = firstRoundHistoryBySupport.get(row.supportDiscordId) ?? [];
+      currentRows.push(row);
+      firstRoundHistoryBySupport.set(row.supportDiscordId, currentRows);
     }
 
     for (const sanctionRow of sanctionRows) {
@@ -578,7 +853,7 @@ export async function GET() {
         ])
       : [null, null];
 
-    const supports = effectiveRoster.supports.map(async (support) => {
+    const supports = supportsForFirstEvaluation.map(async (support) => {
       const supportRows = rowsBySupport.get(support.id) ?? [];
       const supportSanctions = sanctionsBySupport.get(support.id) ?? [];
       const supportPositivePoints = positivePointsBySupport.get(support.id) ?? [];
@@ -591,7 +866,7 @@ export async function GET() {
         0
       );
       const averageScoreWithFallback = average;
-      const canFinalizeByDeadline = votingClosed && completed > 0;
+      const canFinalizeByDeadline = (votingClosed || secondEvaluationEnabled) && completed > 0;
       const isFinalized = allEvaluated || canFinalizeByDeadline;
       const missingEvaluations = Math.max(0, requiredEvaluations - completed);
 
@@ -685,8 +960,68 @@ export async function GET() {
 
     const supportsResolved = await Promise.all(supports);
 
+    const supportById = new Map(effectiveRoster.supports.map((support) => [support.id, support]));
+
+    const secondSupports = secondEvaluationCandidates.map((candidate) => {
+      const support = supportById.get(candidate.supportDiscordId);
+      const supportRows = secondEvaluationRowsBySupport.get(candidate.supportDiscordId) ?? [];
+      const previousRows = firstRoundHistoryBySupport.get(candidate.supportDiscordId) ?? [];
+      const completed = supportRows.length;
+      const totalScore = supportRows.reduce((sum, row) => sum + row.score, 0);
+      const average = completed > 0 ? Number((totalScore / completed).toFixed(2)) : null;
+
+      const evaluatorIds = new Set(supportRows.map((row) => row.evaluatorDiscordId));
+      const pendingEvaluators = effectiveRoster.evaluators
+        .filter((evaluator) => !evaluatorIds.has(evaluator.id))
+        .map((evaluator) => evaluator.displayName);
+
+      const myEvaluation = supportRows.find(
+        (row) => row.evaluatorDiscordId === session?.user?.discordUserId
+      );
+
+      const decision: "Pasa" | "No Pasa" | "Pendiente" =
+        completed === 0 ? "Pendiente" : (average ?? 0) >= 7 ? "Pasa" : "No Pasa";
+
+      return {
+        id: candidate.supportDiscordId,
+        displayName: support?.displayName ?? candidate.supportDiscordId,
+        username: support?.username ?? "",
+        completedEvaluations: completed,
+        requiredEvaluations,
+        averageScore: average,
+        decision,
+        pendingEvaluators,
+        evaluations: supportRows.map((row) => ({
+          evaluatorName: row.evaluatorName,
+          score: row.score,
+          notes: row.notes,
+          updatedAt: row.updatedAt,
+        })),
+        myEvaluation: myEvaluation
+          ? {
+              score: myEvaluation.score,
+              notes: myEvaluation.notes,
+            }
+          : null,
+        previousRound: {
+          averageScore: candidate.previousAverageScore,
+          completedEvaluations: candidate.previousCompletedEvaluations,
+          evaluations: previousRows.map((row) => ({
+            evaluatorName: row.evaluatorName,
+            score: row.score,
+            notes: row.notes,
+            updatedAt: row.updatedAt,
+          })),
+        },
+      };
+    });
+
     return NextResponse.json({
       supports: supportsResolved,
+      secondEvaluation: {
+        enabled: secondEvaluationEnabled,
+        supports: secondSupports,
+      },
       evaluators: effectiveRoster.evaluators,
       voting: {
         deadlineIso: votingDeadlineIso ? votingDeadlineIso.toISOString() : null,
@@ -758,6 +1093,7 @@ export async function PUT(request: Request) {
   const supportDiscordId = body.supportDiscordId?.trim() ?? "";
   const score = Number(body.score);
   const notes = body.notes?.trim() ?? "";
+  const stage = body.stage === "second" ? "second" : "first";
 
   if (!isValidDiscordId(supportDiscordId)) {
     return NextResponse.json({ error: "supportDiscordId invalido" }, { status: 400 });
@@ -770,58 +1106,127 @@ export async function PUT(request: Request) {
   try {
     const { prisma } = await import("@/lib/prisma");
     const roster = await loadRoster();
+
     const settingsRow = await loadPromotionSettings();
-    const votingDeadlineIso = settingsRow?.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
 
-    if (votingDeadlineIso && votingDeadlineIso.getTime() <= Date.now()) {
-      return NextResponse.json(
-        { error: "El plazo de votacion ya finalizo. La votacion esta cerrada." },
-        { status: 409 }
-      );
-    }
+    if (stage === "first") {
+      if (settingsRow?.secondEvaluationEnabled) {
+        return NextResponse.json(
+          { error: "La primera votacion ya fue cerrada. Debes usar Segunda evaluación." },
+          { status: 409 }
+        );
+      }
 
-    if (!roster.supports.some((support) => support.id === supportDiscordId)) {
-      return NextResponse.json({ error: "El miembro no pertenece al rango Support" }, { status: 400 });
+      const votingDeadlineIso = settingsRow?.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
+      if (votingDeadlineIso && votingDeadlineIso.getTime() <= Date.now()) {
+        return NextResponse.json(
+          { error: "El plazo de votacion ya finalizo. La votacion esta cerrada." },
+          { status: 409 }
+        );
+      }
+
+      if (!roster.supports.some((support) => support.id === supportDiscordId)) {
+        return NextResponse.json({ error: "El miembro no pertenece al rango Support" }, { status: 400 });
+      }
     }
 
     if (!roster.evaluators.some((evaluator) => evaluator.id === sessionUser.discordUserId)) {
       return NextResponse.json({ error: "No perteneces al grupo evaluador" }, { status: 403 });
     }
 
-    await ensureEvaluationTable();
+    if (stage === "first") {
+      await ensureEvaluationTable();
 
-    const existing = await prisma.$queryRaw<Array<{ evaluatorDiscordId: string }>>`
-      SELECT "evaluatorDiscordId"
-      FROM "SupportPromotionEvaluation"
-      WHERE "supportDiscordId" = ${supportDiscordId}
-        AND "evaluatorDiscordId" = ${sessionUser.discordUserId}
-      LIMIT 1
-    `;
+      const existing = await prisma.$queryRaw<Array<{ evaluatorDiscordId: string }>>`
+        SELECT "evaluatorDiscordId"
+        FROM "SupportPromotionEvaluation"
+        WHERE "supportDiscordId" = ${supportDiscordId}
+          AND "evaluatorDiscordId" = ${sessionUser.discordUserId}
+        LIMIT 1
+      `;
 
-    if (existing.length > 0) {
-      return NextResponse.json(
-        { error: "Tu evaluación ya fue registrada y no se puede modificar." },
-        { status: 409 }
-      );
+      if (existing.length > 0) {
+        return NextResponse.json(
+          { error: "Tu evaluación ya fue registrada y no se puede modificar." },
+          { status: 409 }
+        );
+      }
+
+      await prisma.$executeRaw`
+        INSERT INTO "SupportPromotionEvaluation" (
+          "supportDiscordId",
+          "evaluatorDiscordId",
+          "evaluatorName",
+          "score",
+          "notes",
+          "updatedAt"
+        ) VALUES (
+          ${supportDiscordId},
+          ${sessionUser.discordUserId},
+          ${sessionUser.name ?? "-"},
+          ${Math.round(score)},
+          ${notes.length > 0 ? notes : null},
+          NOW()
+        )
+      `;
+    } else {
+      if (!settingsRow?.secondEvaluationEnabled) {
+        return NextResponse.json(
+          { error: "La Segunda evaluación aun no esta habilitada." },
+          { status: 409 }
+        );
+      }
+
+      await ensureSecondEvaluationCandidateTable();
+      await ensureSecondEvaluationTable();
+
+      const candidateRows = await prisma.$queryRaw<Array<{ supportDiscordId: string }>>`
+        SELECT "supportDiscordId"
+        FROM "PromotionSecondEvaluationCandidate"
+        WHERE "supportDiscordId" = ${supportDiscordId}
+        LIMIT 1
+      `;
+
+      if (candidateRows.length === 0) {
+        return NextResponse.json(
+          { error: "El miembro no pertenece al listado de Segunda evaluación." },
+          { status: 400 }
+        );
+      }
+
+      const existing = await prisma.$queryRaw<Array<{ evaluatorDiscordId: string }>>`
+        SELECT "evaluatorDiscordId"
+        FROM "SupportPromotionSecondEvaluation"
+        WHERE "supportDiscordId" = ${supportDiscordId}
+          AND "evaluatorDiscordId" = ${sessionUser.discordUserId}
+        LIMIT 1
+      `;
+
+      if (existing.length > 0) {
+        return NextResponse.json(
+          { error: "Tu evaluación de Segunda evaluación ya fue registrada y no se puede modificar." },
+          { status: 409 }
+        );
+      }
+
+      await prisma.$executeRaw`
+        INSERT INTO "SupportPromotionSecondEvaluation" (
+          "supportDiscordId",
+          "evaluatorDiscordId",
+          "evaluatorName",
+          "score",
+          "notes",
+          "updatedAt"
+        ) VALUES (
+          ${supportDiscordId},
+          ${sessionUser.discordUserId},
+          ${sessionUser.name ?? "-"},
+          ${Math.round(score)},
+          ${notes.length > 0 ? notes : null},
+          NOW()
+        )
+      `;
     }
-
-    await prisma.$executeRaw`
-      INSERT INTO "SupportPromotionEvaluation" (
-        "supportDiscordId",
-        "evaluatorDiscordId",
-        "evaluatorName",
-        "score",
-        "notes",
-        "updatedAt"
-      ) VALUES (
-        ${supportDiscordId},
-        ${sessionUser.discordUserId},
-        ${sessionUser.name ?? "-"},
-        ${Math.round(score)},
-        ${notes.length > 0 ? notes : null},
-        NOW()
-      )
-    `;
 
     return NextResponse.json({ ok: true });
   } catch (error) {

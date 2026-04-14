@@ -62,6 +62,37 @@ type SupportEvaluation = {
   inImprovementPeriod: boolean;
 };
 
+type SecondEvaluationSupport = {
+  id: string;
+  displayName: string;
+  username: string;
+  completedEvaluations: number;
+  requiredEvaluations: number;
+  averageScore: number | null;
+  decision: "Pasa" | "No Pasa" | "Pendiente";
+  pendingEvaluators: string[];
+  evaluations: Array<{
+    evaluatorName: string;
+    score: number;
+    notes: string | null;
+    updatedAt: string;
+  }>;
+  myEvaluation: {
+    score: number;
+    notes: string | null;
+  } | null;
+  previousRound: {
+    averageScore: number | null;
+    completedEvaluations: number;
+    evaluations: Array<{
+      evaluatorName: string;
+      score: number;
+      notes: string | null;
+      updatedAt: string;
+    }>;
+  };
+};
+
 type VotingState = {
   deadlineIso: string | null;
   isClosed: boolean;
@@ -94,6 +125,10 @@ type Evaluator = {
 
 type ApiResponse = {
   supports?: SupportEvaluation[];
+  secondEvaluation?: {
+    enabled: boolean;
+    supports: SecondEvaluationSupport[];
+  };
   evaluators?: Evaluator[];
   voting?: VotingState;
   cohort?: PromotionCohort | null;
@@ -254,6 +289,13 @@ function buildPromotionReport(input: {
 
 export function PromotionEvaluationPanel() {
   const [supports, setSupports] = useState<SupportEvaluation[]>([]);
+  const [secondEvaluation, setSecondEvaluation] = useState<{
+    enabled: boolean;
+    supports: SecondEvaluationSupport[];
+  }>({
+    enabled: false,
+    supports: [],
+  });
   const [evaluators, setEvaluators] = useState<Evaluator[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -279,6 +321,7 @@ export function PromotionEvaluationPanel() {
     cut1: null,
     cut2: null,
   });
+  const [selectedSecondSupportId, setSelectedSecondSupportId] = useState<string>("");
 
   async function loadData(showLoading: boolean) {
     if (showLoading) {
@@ -299,6 +342,10 @@ export function PromotionEvaluationPanel() {
       }
 
       const nextSupports = Array.isArray(data?.supports) ? data.supports : [];
+      const nextSecondEvaluation = data?.secondEvaluation ?? {
+        enabled: false,
+        supports: [],
+      };
       const nextEvaluators = Array.isArray(data?.evaluators) ? data.evaluators : [];
       const nextVoting = data?.voting ?? {
         deadlineIso: null,
@@ -307,6 +354,7 @@ export function PromotionEvaluationPanel() {
       };
 
       setSupports(nextSupports);
+      setSecondEvaluation(nextSecondEvaluation);
       setEvaluators(nextEvaluators);
       setVotingState(nextVoting);
       setCohort(data?.cohort ?? null);
@@ -326,12 +374,22 @@ export function PromotionEvaluationPanel() {
             next[support.id] = support.myEvaluation?.score ?? 7;
           }
         }
+        for (const support of nextSecondEvaluation.supports) {
+          if (!(support.id in next)) {
+            next[support.id] = support.myEvaluation?.score ?? 7;
+          }
+        }
         return next;
       });
 
       setNotesDraft((prev) => {
         const next = { ...prev };
         for (const support of nextSupports) {
+          if (!(support.id in next)) {
+            next[support.id] = support.myEvaluation?.notes ?? "";
+          }
+        }
+        for (const support of nextSecondEvaluation.supports) {
           if (!(support.id in next)) {
             next[support.id] = support.myEvaluation?.notes ?? "";
           }
@@ -375,6 +433,20 @@ export function PromotionEvaluationPanel() {
       setSelectedSupportId(supports[0].id);
     }
   }, [supports, selectedSupportId]);
+
+  useEffect(() => {
+    if (!secondEvaluation.enabled || secondEvaluation.supports.length === 0) {
+      setSelectedSecondSupportId("");
+      return;
+    }
+
+    if (
+      !selectedSecondSupportId ||
+      !secondEvaluation.supports.some((support) => support.id === selectedSecondSupportId)
+    ) {
+      setSelectedSecondSupportId(secondEvaluation.supports[0].id);
+    }
+  }, [secondEvaluation, selectedSecondSupportId]);
 
   const filteredSupports = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -450,6 +522,10 @@ export function PromotionEvaluationPanel() {
     () => supports.find((support) => support.id === selectedSupportId) ?? null,
     [supports, selectedSupportId]
   );
+  const selectedSecondSupport = useMemo(
+    () => secondEvaluation.supports.find((support) => support.id === selectedSecondSupportId) ?? null,
+    [secondEvaluation.supports, selectedSecondSupportId]
+  );
 
   const selectedScore = selectedSupport ? scoreDraft[selectedSupport.id] ?? 7 : 7;
   const selectedZone = getScoreZone(selectedScore);
@@ -515,8 +591,8 @@ export function PromotionEvaluationPanel() {
     }
   }
 
-  async function saveEvaluation(supportId: string) {
-    if (votingState.isClosed) {
+  async function saveEvaluation(supportId: string, stage: "first" | "second" = "first") {
+    if (stage === "first" && votingState.isClosed) {
       setMessage("La votacion esta cerrada porque ya vencio el plazo.");
       setTimeout(() => setMessage(null), 2600);
       return;
@@ -538,6 +614,7 @@ export function PromotionEvaluationPanel() {
           supportDiscordId: supportId,
           score,
           notes,
+          stage,
         }),
       });
 
@@ -759,10 +836,11 @@ export function PromotionEvaluationPanel() {
         ) : null}
 
         {!loading && !error ? (
-          <div className="relative z-10 mt-5 grid gap-4 grid-cols-[280px_1fr]">
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-              <div className="max-h-[40rem] space-y-2 overflow-y-auto pr-1">
-                {filteredSupports.map((support) => {
+          <>
+            <div className="relative z-10 mt-5 grid gap-4 grid-cols-[280px_1fr]">
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                <div className="max-h-[40rem] space-y-2 overflow-y-auto pr-1">
+                  {filteredSupports.map((support) => {
                   const isSelected = selectedSupportId === support.id;
 
                   return (
@@ -808,25 +886,25 @@ export function PromotionEvaluationPanel() {
                       </div>
                     </button>
                   );
-                })}
+                  })}
 
-                {filteredSupports.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-white/15 bg-white/[0.02] p-4 text-center text-[11px] text-[var(--color-neutral-grey)]">
-                    Sin resultados
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-              {!selectedSupport ? (
-                <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-8 text-center">
-                  <CircleDot className="mx-auto h-6 w-6 text-[var(--color-neutral-grey)]" />
-                  <p className="mt-3 text-sm text-[var(--color-neutral-grey)]">
-                    Selecciona un support desde la izquierda para abrir su workspace.
-                  </p>
+                  {filteredSupports.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-white/15 bg-white/[0.02] p-4 text-center text-[11px] text-[var(--color-neutral-grey)]">
+                      Sin resultados
+                    </div>
+                  ) : null}
                 </div>
-              ) : (
-                <>
+              </div>
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                {!selectedSupport ? (
+                  <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-8 text-center">
+                    <CircleDot className="mx-auto h-6 w-6 text-[var(--color-neutral-grey)]" />
+                    <p className="mt-3 text-sm text-[var(--color-neutral-grey)]">
+                      Selecciona un support desde la izquierda para abrir su workspace.
+                    </p>
+                  </div>
+                ) : (
+                  <>
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -1114,10 +1192,147 @@ export function PromotionEvaluationPanel() {
                       </div>
                     </div>
                   )}
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+
+            {secondEvaluation.enabled ? (
+              <div className="relative z-10 mt-6 rounded-xl border border-[#f59e0b]/25 bg-[#f59e0b]/8 p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#fbbf24]">Segunda evaluación</p>
+                    <h3 className="mt-1 text-base font-semibold text-[var(--color-neutral-white)]">Supports que no pasaron el cierre inicial</h3>
+                    <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
+                      Aquí se reinicia la evaluación desde cero para todos los evaluadores. Se conserva visible el puntaje y comentarios de la ronda anterior.
+                    </p>
+                  </div>
+                  <span className="rounded-md border border-[#f59e0b]/35 bg-[#f59e0b]/12 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#fbbf24]">
+                    {secondEvaluation.supports.length} pendiente(s)
+                  </span>
+                </div>
+
+                {secondEvaluation.supports.length === 0 ? (
+                  <p className="mt-3 text-xs text-[var(--color-neutral-grey)]">
+                    No hay supports pendientes para Segunda evaluación.
+                  </p>
+                ) : (
+                  <div className="mt-4 grid gap-3 lg:grid-cols-[260px_1fr]">
+                    <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-2">
+                      <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                        {secondEvaluation.supports.map((support) => (
+                          <button
+                            key={support.id}
+                            type="button"
+                            onClick={() => setSelectedSecondSupportId(support.id)}
+                            className={`w-full rounded-md border px-2.5 py-2 text-left text-[11px] transition ${
+                              selectedSecondSupportId === support.id
+                                ? "border-[#f59e0b]/45 bg-[#f59e0b]/12"
+                                : "border-white/[0.08] bg-white/[0.02] hover:border-white/20"
+                            }`}
+                          >
+                            <p className="truncate font-semibold text-[var(--color-neutral-white)]">{support.displayName}</p>
+                            <p className="mt-0.5 truncate text-[10px] text-[var(--color-neutral-grey)]">
+                              {support.username ? `@${support.username}` : support.id}
+                            </p>
+                            <p className="mt-1 text-[10px] text-[var(--color-neutral-grey)]">
+                              Nueva ronda: {support.completedEvaluations}/{support.requiredEvaluations}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-white/[0.08] bg-white/[0.03] p-3">
+                      {!selectedSecondSupport ? (
+                        <p className="text-xs text-[var(--color-neutral-grey)]">Selecciona un support para evaluar.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="text-sm font-semibold text-[var(--color-neutral-white)]">{selectedSecondSupport.displayName}</h4>
+                            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+                              {selectedSecondSupport.username ? `@${selectedSecondSupport.username}` : selectedSecondSupport.id}
+                            </p>
+                            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+                              Ronda anterior: promedio {selectedSecondSupport.previousRound.averageScore !== null ? selectedSecondSupport.previousRound.averageScore.toFixed(2) : "-"}/10 · evaluaciones {selectedSecondSupport.previousRound.completedEvaluations}
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Evaluación anterior (historial)</p>
+                            {selectedSecondSupport.previousRound.evaluations.length === 0 ? (
+                              <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">Sin evaluaciones históricas registradas.</p>
+                            ) : (
+                              <div className="mt-2 max-h-40 space-y-2 overflow-auto pr-1">
+                                {selectedSecondSupport.previousRound.evaluations.map((item, index) => (
+                                  <div key={`${item.evaluatorName}-${index}`} className="rounded-md border border-white/[0.08] bg-white/[0.02] p-2 text-[11px]">
+                                    <p className="font-semibold text-[var(--color-neutral-white)]">{item.evaluatorName}: {item.score}/10</p>
+                                    <p className="mt-0.5 text-[10px] text-[var(--color-neutral-grey)]">{formatDateTime(item.updatedAt)}</p>
+                                    <p className="mt-1 text-[var(--color-neutral-grey)]">{item.notes?.trim() || "Sin observaciones"}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {selectedSecondSupport.myEvaluation ? (
+                            <div className="rounded-lg border border-[var(--color-accent-green)]/35 bg-[var(--color-accent-green)]/10 p-3">
+                              <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent-green)]">
+                                ✓ Ya registraste tu Segunda evaluación
+                              </p>
+                              <p className="mt-1 text-sm font-bold text-[var(--color-neutral-white)]">
+                                {selectedSecondSupport.myEvaluation.score}/10
+                              </p>
+                              {selectedSecondSupport.myEvaluation.notes ? (
+                                <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">{selectedSecondSupport.myEvaluation.notes}</p>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Mi nueva evaluación</label>
+                              <input
+                                type="number"
+                                min={1}
+                                max={10}
+                                step={1}
+                                value={scoreDraft[selectedSecondSupport.id] ?? 7}
+                                onChange={(e) =>
+                                  setScoreDraft((prev) => ({
+                                    ...prev,
+                                    [selectedSecondSupport.id]: clampScore(Number(e.target.value)),
+                                  }))
+                                }
+                                className="w-24 rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-1 text-sm text-[var(--color-neutral-white)] outline-none focus:border-[#f59e0b]/45"
+                              />
+                              <textarea
+                                value={notesDraft[selectedSecondSupport.id] ?? ""}
+                                onChange={(e) =>
+                                  setNotesDraft((prev) => ({
+                                    ...prev,
+                                    [selectedSecondSupport.id]: e.target.value,
+                                  }))
+                                }
+                                placeholder="Comentarios de esta nueva ronda"
+                                className="min-h-20 w-full rounded-md border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs text-[var(--color-neutral-white)] outline-none focus:border-[#f59e0b]/45"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => saveEvaluation(selectedSecondSupport.id, "second")}
+                                disabled={savingId === selectedSecondSupport.id}
+                                className="rounded-md border border-[#f59e0b]/40 bg-[#f59e0b]/15 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#fbbf24] transition hover:bg-[#f59e0b]/25 disabled:opacity-50"
+                              >
+                                {savingId === selectedSecondSupport.id ? "Guardando..." : "Guardar Segunda evaluación"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </>
         ) : null}
       </UICard>
   );
