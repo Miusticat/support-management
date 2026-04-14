@@ -107,16 +107,6 @@ type PromotionCohort = {
   supportDiscordIds: string[];
 };
 
-type PromotionCcut = {
-  id: string;
-  cutNumber: number;
-  targetRank: string;
-  state: string;
-  startDateIso: string | null;
-  endDateIso: string | null;
-  improvementPeriodEndIso: string | null;
-};
-
 type Evaluator = {
   id: string;
   displayName: string;
@@ -132,10 +122,6 @@ type ApiResponse = {
   evaluators?: Evaluator[];
   voting?: VotingState;
   cohort?: PromotionCohort | null;
-  cuts?: {
-    cut1: PromotionCcut | null;
-    cut2: PromotionCcut | null;
-  };
   permissions?: {
     canManageDeadline?: boolean;
   };
@@ -337,10 +323,6 @@ export function PromotionEvaluationPanel() {
   const [deadlineDraft, setDeadlineDraft] = useState("");
   const [savingDeadline, setSavingDeadline] = useState(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const [cuts, setCuts] = useState<{ cut1: PromotionCcut | null; cut2: PromotionCcut | null }>({
-    cut1: null,
-    cut2: null,
-  });
   const [selectedSecondSupportId, setSelectedSecondSupportId] = useState<string>("");
 
   async function loadData(showLoading: boolean) {
@@ -378,12 +360,6 @@ export function PromotionEvaluationPanel() {
       setEvaluators(nextEvaluators);
       setVotingState(nextVoting);
       setCohort(data?.cohort ?? null);
-      setCuts(
-        data?.cuts ?? {
-          cut1: null,
-          cut2: null,
-        }
-      );
       setCanManageDeadline(Boolean(data?.permissions?.canManageDeadline));
       setDeadlineDraft(nextVoting.deadlineIso ? nextVoting.deadlineIso.slice(0, 16) : "");
 
@@ -802,53 +778,18 @@ export function PromotionEvaluationPanel() {
 
           <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Camada activa</p>
-            {cohort ? (
-              <>
-                <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">{cohort.name}</p>
-                <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
-                  Ingreso: {cohort.startDate} · Finalizacion: {cohort.endDate}
-                </p>
-                <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
-                  Supports de esta camada: {cohort.supportDiscordIds.length}
-                </p>
-              </>
-            ) : (
-              <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">Sin camada registrada.</p>
-            )}
+            <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
+              {secondEvaluationCountdown ?? "Sin cuenta regresiva activa"}
+            </p>
+            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+              {votingState.deadlineIso
+                ? `Cierre programado: ${formatDateTime(votingState.deadlineIso)}`
+                : "No hay fecha limite configurada para la votacion activa."}
+            </p>
+            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+              {votingState.isClosed ? "La votacion activa ya esta cerrada." : "La votacion activa sigue abierta."}
+            </p>
           </div>
-
-          {cuts.cut1 || cuts.cut2 ? (
-            <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Cortes de promocion</p>
-              {cuts.cut1 ? (
-                <div className="mt-2 rounded-md border border-[#3b82f6]/30 bg-[#3b82f6]/10 p-2">
-                  <p className="text-[11px] font-semibold text-[#60a5fa]">Corte 1: {cuts.cut1.targetRank}</p>
-                  {cuts.cut1.startDateIso && cuts.cut1.endDateIso ? (
-                    <p className="text-[10px] text-[#93c5fd]">
-                      {new Date(cuts.cut1.startDateIso).toLocaleDateString("es-ES")} al{" "}
-                      {new Date(cuts.cut1.endDateIso).toLocaleDateString("es-ES")}
-                    </p>
-                  ) : null}
-                  {cuts.cut1.improvementPeriodEndIso ? (
-                    <p className="text-[10px] text-[#93c5fd]">
-                      Mejora hasta: {new Date(cuts.cut1.improvementPeriodEndIso).toLocaleDateString("es-ES")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-              {cuts.cut2 ? (
-                <div className="mt-2 rounded-md border border-[#8b5cf6]/30 bg-[#8b5cf6]/10 p-2">
-                  <p className="text-[11px] font-semibold text-[#c084fc]">Corte 2: {cuts.cut2.targetRank}</p>
-                  {cuts.cut2.startDateIso && cuts.cut2.endDateIso ? (
-                    <p className="text-[10px] text-[#d8b4fe]">
-                      {new Date(cuts.cut2.startDateIso).toLocaleDateString("es-ES")} al{" "}
-                      {new Date(cuts.cut2.endDateIso).toLocaleDateString("es-ES")}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         {message ? (
