@@ -2,15 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   CircleDot,
   Clock3,
-  FileDown,
-  RefreshCcw,
-  Search,
-  Star,
-  UserCheck,
-  Users,
 } from "lucide-react";
 import { UICard } from "@/app/components/ui-card";
 
@@ -146,7 +139,6 @@ const scoreZoneLabel = {
   low: "Zona de no aprobacion",
 } as const;
 
-type StatusFilter = "all" | "pending" | "passed" | "failed";
 type DetailPanel = "evaluate" | "sanctions" | "positivePoints";
 
 function clampScore(value: number): number {
@@ -209,89 +201,6 @@ function formatCountdown(targetIso: string, nowMs: number) {
   return `${days}d ${hours}h ${minutes}m`;
 }
 
-function buildPromotionReport(input: {
-  supports: SupportEvaluation[];
-  evaluators: Evaluator[];
-  voting: VotingState;
-  cohort: PromotionCohort | null;
-  generatedAt: Date;
-}) {
-  const { supports, evaluators, voting, cohort, generatedAt } = input;
-  const lines: string[] = [];
-
-  lines.push("# Informe de Evaluacion de Ascenso");
-  lines.push("");
-  lines.push(`Generado: ${generatedAt.toLocaleString("es-ES")}`);
-  lines.push(`Evaluadores activos: ${evaluators.map((item) => item.displayName).join(", ") || "Sin evaluadores"}`);
-  lines.push(`Total de supports evaluados: ${supports.length}`);
-  lines.push(`Plazo de votacion: ${voting.deadlineIso ? formatDateTime(voting.deadlineIso) : "Sin fecha limite"}`);
-  lines.push(`Estado de votacion: ${voting.isClosed ? "Cerrada" : "Abierta"}`);
-  if (cohort) {
-    lines.push(`Camada activa: ${cohort.name} (${cohort.startDate} -> ${cohort.endDate})`);
-  }
-  lines.push("");
-
-  for (const support of supports) {
-    const approvingEvaluators = support.evaluations
-      .filter((item) => item.score >= 7)
-      .map((item) => `${item.evaluatorName} (${item.score}/10)`);
-    const rejectingEvaluators = support.evaluations
-      .filter((item) => item.score < 7)
-      .map((item) => `${item.evaluatorName} (${item.score}/10)`);
-
-    lines.push(`## ${support.displayName} (${support.id})`);
-    lines.push(`Usuario: ${support.username ? `@${support.username}` : "-"}`);
-    lines.push(`Decision final: ${support.decision}`);
-    lines.push(
-      `Promedio: ${support.averageScore !== null ? support.averageScore.toFixed(2) : "-"}/10 · Evaluaciones: ${support.completedEvaluations}/${support.requiredEvaluations}`
-    );
-    lines.push(`Aprueban: ${approvingEvaluators.length > 0 ? approvingEvaluators.join(", ") : "Nadie"}`);
-    lines.push(`No aprueban: ${rejectingEvaluators.length > 0 ? rejectingEvaluators.join(", ") : "Nadie"}`);
-    lines.push(`Pendientes: ${support.pendingEvaluators.length > 0 ? support.pendingEvaluators.join(", ") : "Sin pendientes"}`);
-    if (support.autoAveragedMissingVotes > 0) {
-      lines.push(`Votos faltantes promediados automaticamente: ${support.autoAveragedMissingVotes}`);
-    }
-    lines.push(
-      `Sanciones: ${support.sanctionsSummary.total} registro(s)${
-        support.sanctionsSummary.hasSanctions
-          ? ` · Ultimas: ${support.sanctionsSummary.latest
-              .map((item) => `${item.fecha || "-"} ${item.appliedSanction}`)
-              .join(" | ")}`
-          : ""
-      }`
-    );
-    lines.push(
-      `Puntos positivos: ${support.positivePointsSummary.totalRecords} registro(s), ${support.positivePointsSummary.totalPoints} punto(s)`
-    );
-
-    lines.push("Evaluaciones individuales:");
-    if (support.evaluations.length === 0) {
-      lines.push("- Sin evaluaciones registradas.");
-    } else {
-      for (const evaluation of support.evaluations) {
-        lines.push(
-          `- ${evaluation.evaluatorName}: ${evaluation.score}/10 · ${formatDateTime(evaluation.updatedAt)} · Observaciones: ${evaluation.notes?.trim() || "Sin observaciones"}`
-        );
-      }
-    }
-
-    if (support.positivePointsSummary.latest.length > 0) {
-      lines.push("Puntos positivos recientes:");
-      for (const point of support.positivePointsSummary.latest) {
-        lines.push(
-          `- ${point.fecha || "-"} · ${point.pointType} (+${point.pointValue}) · ${point.justificacion}${
-            point.observaciones ? ` · Obs: ${point.observaciones}` : ""
-          }`
-        );
-      }
-    }
-
-    lines.push("");
-  }
-
-  return lines.join("\n");
-}
-
 export function PromotionEvaluationPanel() {
   const [supports, setSupports] = useState<SupportEvaluation[]>([]);
   const [secondEvaluation, setSecondEvaluation] = useState<{
@@ -302,8 +211,6 @@ export function PromotionEvaluationPanel() {
     supports: [],
   });
   const [evaluators, setEvaluators] = useState<Evaluator[]>([]);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedSupportId, setSelectedSupportId] = useState<string>("");
   const [activePanel, setActivePanel] = useState<DetailPanel>("evaluate");
   const [scoreDraft, setScoreDraft] = useState<Record<string, number>>({});
@@ -312,7 +219,6 @@ export function PromotionEvaluationPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [votingState, setVotingState] = useState<VotingState>({
     deadlineIso: null,
     isClosed: false,
@@ -420,15 +326,19 @@ export function PromotionEvaluationPanel() {
   }, []);
 
   useEffect(() => {
-    if (supports.length === 0) {
+    const nextSupports = secondEvaluation.enabled
+      ? supports.filter((support) => support.decision !== "Pasa")
+      : supports;
+
+    if (nextSupports.length === 0) {
       setSelectedSupportId("");
       return;
     }
 
-    if (!selectedSupportId || !supports.some((support) => support.id === selectedSupportId)) {
-      setSelectedSupportId(supports[0].id);
+    if (!selectedSupportId || !nextSupports.some((support) => support.id === selectedSupportId)) {
+      setSelectedSupportId(nextSupports[0].id);
     }
-  }, [supports, selectedSupportId]);
+  }, [supports, selectedSupportId, secondEvaluation.enabled]);
 
   useEffect(() => {
     const timerId = window.setInterval(() => {
@@ -455,35 +365,11 @@ export function PromotionEvaluationPanel() {
   }, [secondEvaluation, selectedSecondSupportId]);
 
   const filteredSupports = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const mainRoundSupports = secondEvaluation.enabled
+      ? supports.filter((support) => support.decision !== "Pasa")
+      : supports;
 
-    const filtered = supports.filter((support) => {
-      const matchesSearch =
-        normalizedQuery.length === 0 ||
-        support.displayName.toLowerCase().includes(normalizedQuery) ||
-        support.username.toLowerCase().includes(normalizedQuery) ||
-        support.id.includes(normalizedQuery);
-
-      if (!matchesSearch) {
-        return false;
-      }
-
-      if (statusFilter === "pending") {
-        return support.decision === "Pendiente";
-      }
-
-      if (statusFilter === "passed") {
-        return support.decision === "Pasa";
-      }
-
-      if (statusFilter === "failed") {
-        return support.decision === "No Pasa";
-      }
-
-      return true;
-    });
-
-    return filtered.sort((a, b) => {
+    return mainRoundSupports.sort((a, b) => {
       const priorityOrder = { Pendiente: 0, "No Pasa": 1, Pasa: 2 };
       const aPriority = priorityOrder[a.decision] ?? 3;
       const bPriority = priorityOrder[b.decision] ?? 3;
@@ -504,29 +390,49 @@ export function PromotionEvaluationPanel() {
 
       return aHasSanctions - bHasSanctions;
     });
-  }, [supports, query, statusFilter]);
+  }, [supports, secondEvaluation.enabled]);
 
-  const totalSupports = supports.length;
-  const finalizedSupports = supports.filter((support) => support.decision !== "Pendiente").length;
-  const passedSupports = supports.filter((support) => support.decision === "Pasa").length;
-  const highRiskSupports = supports.filter((support) => support.sanctionsSummary.hasSanctions).length;
-  const pendingSupports = supports.filter((support) => support.decision === "Pendiente").length;
-  const failedSupports = supports.filter((support) => support.decision === "No Pasa").length;
-  const averageCompletedScore =
-    supports
-      .filter((support) => typeof support.averageScore === "number")
-      .reduce((acc, support) => acc + (support.averageScore ?? 0), 0) /
-    Math.max(
-      1,
-      supports.filter((support) => typeof support.averageScore === "number").length
+  const historicalPassedSupports = useMemo(() => {
+    if (!secondEvaluation.enabled) {
+      return [];
+    }
+
+    return supports
+      .filter((support) => support.decision === "Pasa")
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, "es", { sensitivity: "base" }));
+  }, [supports, secondEvaluation.enabled]);
+
+  const cohortHistoryMembers = useMemo(() => {
+    if (!secondEvaluation.enabled) {
+      return [];
+    }
+
+    const firstRound = historicalPassedSupports.map((support) => ({
+      id: support.id,
+      displayName: support.displayName,
+      stage: "Primera ronda",
+      averageScore: support.averageScore,
+      decision: support.decision,
+    }));
+
+    const secondRound = votingState.isClosed
+      ? secondEvaluation.supports.map((support) => ({
+          id: support.id,
+          displayName: support.displayName,
+          stage: "Segunda ronda",
+          averageScore: support.averageScore,
+          decision: support.decision,
+        }))
+      : [];
+
+    return [...firstRound, ...secondRound].sort((a, b) =>
+      a.displayName.localeCompare(b.displayName, "es", { sensitivity: "base" })
     );
-
-  const completionPercent =
-    totalSupports > 0 ? Math.round((finalizedSupports / totalSupports) * 100) : 0;
+  }, [historicalPassedSupports, secondEvaluation, votingState.isClosed]);
 
   const selectedSupport = useMemo(
-    () => supports.find((support) => support.id === selectedSupportId) ?? null,
-    [supports, selectedSupportId]
+    () => filteredSupports.find((support) => support.id === selectedSupportId) ?? null,
+    [filteredSupports, selectedSupportId]
   );
   const selectedSecondSupport = useMemo(
     () => secondEvaluation.supports.find((support) => support.id === selectedSecondSupportId) ?? null,
@@ -539,35 +445,6 @@ export function PromotionEvaluationPanel() {
 
   const selectedScore = selectedSupport ? scoreDraft[selectedSupport.id] ?? 7 : 7;
   const selectedZone = getScoreZone(selectedScore);
-
-  async function refreshNow() {
-    setIsRefreshing(true);
-    await loadData(false);
-    setIsRefreshing(false);
-  }
-
-  function downloadReport() {
-    const reportContent = buildPromotionReport({
-      supports,
-      evaluators,
-      voting: votingState,
-      cohort,
-      generatedAt: new Date(),
-    });
-
-    const blob = new Blob([reportContent], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const dateTag = new Date().toISOString().slice(0, 10);
-
-    link.href = url;
-    link.download = `promotion-evaluation-report-${dateTag}.md`;
-    link.click();
-
-    URL.revokeObjectURL(url);
-    setMessage("Informe descargado correctamente.");
-    setTimeout(() => setMessage(null), 2500);
-  }
 
   async function saveVotingDeadline() {
     setSavingDeadline(true);
@@ -660,86 +537,7 @@ export function PromotionEvaluationPanel() {
               Evaluadores actuales: {evaluators.length > 0 ? evaluators.map((evaluator) => evaluator.displayName).join(", ") : "Sin evaluadores activos"}
             </p>
           </div>
-
-          <div className="flex w-full max-w-xl flex-col gap-2 sm:items-end">
-            <div className="flex w-full flex-col gap-2 sm:flex-row">
-              <label className="relative flex-1">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-[var(--color-neutral-grey)]" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar support"
-                  className="w-full rounded-lg border border-white/[0.08] bg-white/[0.03] py-2 pl-9 pr-3 text-sm text-[var(--color-neutral-white)] outline-none transition-all focus:border-[#ffac00]/40 focus:shadow-[0_0_0_3px_rgba(255,172,0,0.08)]"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => void refreshNow()}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.1] bg-white/[0.03] px-3 py-2 text-xs font-semibold text-[var(--color-neutral-white)] transition hover:border-white/30"
-                disabled={isRefreshing}
-              >
-                <RefreshCcw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-                {isRefreshing ? "Actualizando" : "Actualizar"}
-              </button>
-
-              <button
-                type="button"
-                onClick={downloadReport}
-                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#ffac00]/40 bg-[#ffac00]/15 px-3 py-2 text-xs font-semibold text-[#ffac00] transition hover:bg-[#ffac00]/25"
-              >
-                <FileDown className="h-3.5 w-3.5" />
-                Descargar informe
-              </button>
-            </div>
-
-            <div className="flex w-full flex-wrap gap-1.5">
-              {[
-                { key: "all", label: "Todos" },
-                { key: "pending", label: "Pendientes" },
-                { key: "passed", label: "Aprueban" },
-                { key: "failed", label: "No aprueban" },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setStatusFilter(item.key as StatusFilter)}
-                  className={`rounded-md border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition ${
-                    statusFilter === item.key
-                      ? "border-[#ffac00]/50 bg-[#ffac00]/15 text-[#ffac00]"
-                      : "border-white/[0.08] bg-white/[0.02] text-[var(--color-neutral-grey)] hover:border-white/20"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
-
-        <div className="relative z-10 mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-            <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]"><Users className="h-3 w-3" /> Total supports</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">{totalSupports}</p>
-          </div>
-          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-            <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]"><Clock3 className="h-3 w-3" /> Pendientes</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">{pendingSupports}</p>
-          </div>
-          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-            <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]"><UserCheck className="h-3 w-3" /> Aprobados</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">{passedSupports}</p>
-          </div>
-          <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-            <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--color-neutral-grey)]"><AlertTriangle className="h-3 w-3" /> Con sanciones</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">{highRiskSupports}</p>
-          </div>
-        </div>
-
-        <p className="relative z-10 mt-2 flex items-center gap-1.5 text-[11px] text-[var(--color-neutral-grey)]">
-          <Star className="h-3.5 w-3.5 text-[#ffac00]" />
-          Completadas: {finalizedSupports}/{totalSupports} ({completionPercent}%) · No aprueban: {failedSupports} · Promedio global: {Number.isFinite(averageCompletedScore) ? averageCompletedScore.toFixed(2) : "-"}/10
-        </p>
 
         <div className="relative z-10 mt-4 grid gap-3 xl:grid-cols-2">
           <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
@@ -791,6 +589,38 @@ export function PromotionEvaluationPanel() {
             </p>
           </div>
         </div>
+
+        {secondEvaluation.enabled ? (
+          <div className="relative z-10 mt-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Historial de Camadas</p>
+            <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
+              {cohort?.name ? cohort.name.replace("camada", "Camada") : "Primera Camada"}
+            </p>
+            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+              Miembros anexados al historial final: {cohortHistoryMembers.length}
+            </p>
+            {!votingState.isClosed ? (
+              <p className="mt-2 text-[11px] text-[var(--color-neutral-grey)]">
+                La segunda ronda aun esta activa. Al cierre, se anexaran aqui los resultados finales de todos los miembros de la camada.
+              </p>
+            ) : null}
+            {cohortHistoryMembers.length > 0 ? (
+              <div className="mt-2 space-y-1.5">
+                {cohortHistoryMembers.map((member) => (
+                  <div
+                    key={`${member.id}-${member.stage}`}
+                    className="rounded-md border border-white/[0.08] bg-white/[0.02] px-2 py-1.5 text-[11px] text-[var(--color-neutral-grey)]"
+                  >
+                    <span className="font-semibold text-[var(--color-neutral-white)]">{member.displayName}</span>
+                    {` · ${member.stage} · ${member.averageScore !== null ? member.averageScore.toFixed(2) : "-"}/10 · ${member.decision}`}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-2 text-[11px] text-[var(--color-neutral-grey)]">Aun no hay resultados anexados para esta camada.</p>
+            )}
+          </div>
+        ) : null}
 
         {message ? (
           <p className="relative z-10 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-xs text-[var(--color-neutral-grey)]">
