@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CircleDot,
   Clock3,
+  FileDown,
 } from "lucide-react";
 import { UICard } from "@/app/components/ui-card";
 
@@ -141,6 +142,14 @@ const scoreZoneLabel = {
 
 type DetailPanel = "evaluate" | "sanctions" | "positivePoints";
 
+type CohortHistoryMember = {
+  id: string;
+  displayName: string;
+  stage: string;
+  averageScore: number | null;
+  decision: "Pasa" | "No Pasa" | "Pendiente";
+};
+
 function clampScore(value: number): number {
   return Math.min(10, Math.max(1, Number.isFinite(value) ? value : 1));
 }
@@ -199,6 +208,32 @@ function formatCountdown(targetIso: string, nowMs: number) {
   const minutes = totalMinutes % 60;
 
   return `${days}d ${hours}h ${minutes}m`;
+}
+
+function buildFinalCohortReport(input: {
+  cohortName: string;
+  votingDeadlineIso: string | null;
+  generatedAt: Date;
+  members: CohortHistoryMember[];
+}) {
+  const { cohortName, votingDeadlineIso, generatedAt, members } = input;
+  const lines: string[] = [];
+
+  lines.push("# Resultado Final de Camada");
+  lines.push("");
+  lines.push(`Camada: ${cohortName}`);
+  lines.push(`Generado: ${generatedAt.toLocaleString("es-ES")}`);
+  lines.push(`Cierre de votacion: ${votingDeadlineIso ? formatDateTime(votingDeadlineIso) : "Sin fecha limite"}`);
+  lines.push(`Total de evaluados: ${members.length}`);
+  lines.push("");
+
+  for (const member of members) {
+    lines.push(`- ${member.displayName} - ${member.decision}`);
+    lines.push(`  Resultado: Promedio final ${member.averageScore !== null ? member.averageScore.toFixed(2) : "-"}/10`);
+    lines.push(`  Etapa: ${member.stage}`);
+  }
+
+  return lines.join("\n");
 }
 
 export function PromotionEvaluationPanel() {
@@ -430,6 +465,8 @@ export function PromotionEvaluationPanel() {
     );
   }, [historicalPassedSupports, secondEvaluation, votingState.isClosed]);
 
+  const canDownloadFinalResult = secondEvaluation.enabled && votingState.isClosed && cohortHistoryMembers.length > 0;
+
   const selectedSupport = useMemo(
     () => filteredSupports.find((support) => support.id === selectedSupportId) ?? null,
     [filteredSupports, selectedSupportId]
@@ -476,6 +513,34 @@ export function PromotionEvaluationPanel() {
     } finally {
       setSavingDeadline(false);
     }
+  }
+
+  function downloadFinalResult() {
+    if (!canDownloadFinalResult) {
+      setMessage("La votacion debe estar cerrada para descargar el resultado final.");
+      setTimeout(() => setMessage(null), 2600);
+      return;
+    }
+
+    const reportContent = buildFinalCohortReport({
+      cohortName: cohort?.name ?? "Primera Camada",
+      votingDeadlineIso: votingState.deadlineIso,
+      generatedAt: new Date(),
+      members: cohortHistoryMembers,
+    });
+
+    const blob = new Blob([reportContent], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const dateTag = new Date().toISOString().slice(0, 10);
+
+    link.href = url;
+    link.download = `promotion-final-result-${dateTag}.md`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+    setMessage("Resultado final descargado correctamente.");
+    setTimeout(() => setMessage(null), 2500);
   }
 
   async function saveEvaluation(supportId: string, stage: "first" | "second" = "first") {
@@ -589,13 +654,26 @@ export function PromotionEvaluationPanel() {
 
         {secondEvaluation.enabled ? (
           <div className="relative z-10 mt-4 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Historial de Camadas</p>
-            <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
-              {cohort?.name ? cohort.name.replace("camada", "Camada") : "Primera Camada"}
-            </p>
-            <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
-              Miembros anexados al historial final: {cohortHistoryMembers.length}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-neutral-grey)]">Historial de Camadas</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--color-neutral-white)]">
+                  {cohort?.name ? cohort.name.replace("camada", "Camada") : "Primera Camada"}
+                </p>
+                <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
+                  Miembros anexados al historial final: {cohortHistoryMembers.length}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={downloadFinalResult}
+                disabled={!canDownloadFinalResult}
+                className="inline-flex items-center gap-1.5 rounded-md border border-[#ffac00]/40 bg-[#ffac00]/15 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#ffac00] transition hover:bg-[#ffac00]/25 disabled:opacity-50"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                Descargar resultado final
+              </button>
+            </div>
             {!votingState.isClosed ? (
               <p className="mt-2 text-[11px] text-[var(--color-neutral-grey)]">
                 La segunda ronda aun esta activa. Al cierre, se anexaran aqui los resultados finales de todos los miembros de la camada.
