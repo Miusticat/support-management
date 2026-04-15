@@ -616,6 +616,9 @@ export function PromotionEvaluationPanel() {
         ok?: boolean;
         alreadyFinalized?: boolean;
         promotedCount?: number;
+        roleAssignedCount?: number;
+        roleErrorCount?: number;
+        roleErrors?: string[];
         error?: string;
       }>(response);
 
@@ -626,7 +629,17 @@ export function PromotionEvaluationPanel() {
       if (data?.alreadyFinalized) {
         setMessage("El cierre final ya estaba guardado previamente.");
       } else {
-        setMessage(`Cierre final guardado. ${data?.promotedCount ?? 0} miembro(s) promovido(s) a Trial Admin.`);
+        const promotedCount = data?.promotedCount ?? 0;
+        const roleAssignedCount = data?.roleAssignedCount ?? promotedCount;
+        const roleErrorCount = data?.roleErrorCount ?? 0;
+
+        if (roleErrorCount > 0) {
+          setMessage(
+            `Cierre final guardado. ${roleAssignedCount}/${promotedCount} miembro(s) recibieron Trial Admin. ${roleErrorCount} pendiente(s) por permisos de Discord.`
+          );
+        } else {
+          setMessage(`Cierre final guardado. ${promotedCount} miembro(s) promovido(s) a Trial Admin.`);
+        }
       }
 
       setTimeout(() => setMessage(null), 3200);

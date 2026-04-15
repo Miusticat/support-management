@@ -1505,15 +1505,7 @@ export async function POST() {
       }
     }
 
-    if (roleErrors.length > 0) {
-      return NextResponse.json(
-        {
-          error: `No se pudo asignar el rol Trial Admin a ${roleErrors.length} miembro(s).`,
-          details: roleErrors,
-        },
-        { status: 502 }
-      );
-    }
+    const roleAssignedCount = passedMembers.length - roleErrors.length;
 
     const cohortId = activeCohort?.id ?? "cohort-final";
     const cohortName = activeCohort?.cohortName ?? "Camada activa";
@@ -1565,6 +1557,9 @@ export async function POST() {
     return NextResponse.json({
       ok: true,
       promotedCount: passedMembers.length,
+      roleAssignedCount,
+      roleErrorCount: roleErrors.length,
+      roleErrors,
       roleId: trialAdminRoleId,
     });
   } catch (error) {
