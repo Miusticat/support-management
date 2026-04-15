@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  CircleDot,
   Clock3,
   FileDown,
 } from "lucide-react";
@@ -768,21 +767,11 @@ export function PromotionEvaluationPanel() {
                   );
                   })}
 
-                  {filteredSupports.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-white/15 bg-white/[0.02] p-4 text-center text-[11px] text-[var(--color-neutral-grey)]">
-                      Sin resultados
-                    </div>
-                  ) : null}
                 </div>
               </div>
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
                 {!selectedSupport ? (
-                  <div className="rounded-xl border border-dashed border-white/20 bg-white/[0.02] p-8 text-center">
-                    <CircleDot className="mx-auto h-6 w-6 text-[var(--color-neutral-grey)]" />
-                    <p className="mt-3 text-sm text-[var(--color-neutral-grey)]">
-                      Selecciona un support desde la izquierda para abrir su workspace.
-                    </p>
-                  </div>
+                  <div className="h-full min-h-40" />
                 ) : (
                   <>
                   <div className="space-y-3">
