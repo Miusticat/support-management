@@ -50,6 +50,15 @@ Optional bot-invite variables:
 - `DISCORD_BOT_CODE_GRANT`
 - `DISCORD_BOT_REDIRECT_URI`
 
+Optional recruitment sheet variables:
+
+- `GOOGLE_POSTULACIONES_SHEET_URL` (recommended, full Google Sheets URL)
+- `GOOGLE_POSTULACIONES_SHEET_ID`
+- `GOOGLE_POSTULACIONES_SHEET_GID`
+
+The app will automatically extract `sheetId` and `gid` from `GOOGLE_POSTULACIONES_SHEET_URL`.
+If that variable is missing, it falls back to `GOOGLE_POSTULACIONES_SHEET_ID` and `GOOGLE_POSTULACIONES_SHEET_GID`.
+
 ## Local Development
 
 Install dependencies:
