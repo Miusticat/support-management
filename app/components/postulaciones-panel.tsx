@@ -1,12 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Star } from "lucide-react";
 import { UICard } from "@/app/components/ui-card";
+
+type Evaluation = {
+  postulacionIndex: string;
+  evaluatorDiscordId: string;
+  evaluatorName: string;
+  score: number;
+  comentarios: string | null;
+  createdAt: string;
+};
+
+type PostulacionRow = {
+  rowData: string[];
+  rowIndex: string;
+  evaluations: Evaluation[];
+  averageScore: number | null;
+  currentUserVote: { score: number; comentarios: string | null } | null;
+};
 
 type PostulacionesResponse = {
   headers?: string[];
-  rows?: string[][];
+  rows?: PostulacionRow[];
+  votingDeadline?: string | null;
   fetchedAt?: string;
   error?: string;
 };
@@ -29,13 +47,74 @@ function formatDateTime(value: string | null) {
   });
 }
 
+function useCountdown(deadline: string | null) {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    isExpired: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!deadline) {
+      return undefined;
+    }
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const target = new Date(deadline).getTime();
+      const diff = target - now;
+
+      if (diff <= 0) {
+        setTimeLeft({
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          isExpired: true,
+        });
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeLeft({
+        days,
+        hours,
+        minutes,
+        seconds,
+        isExpired: false,
+      });
+    };
+
+    updateCountdown();
+    const intervalId = window.setInterval(updateCountdown, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [deadline]);
+
+  return timeLeft;
+}
+
 export function PostulacionesPanel() {
   const [headers, setHeaders] = useState<string[]>([]);
-  const [rows, setRows] = useState<string[][]>([]);
+  const [rows, setRows] = useState<PostulacionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [votingDeadline, setVotingDeadline] = useState<string | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<string | null>(null);
+  const [votingRowIndex, setVotingRowIndex] = useState<string | null>(null);
+  const [votingScore, setVotingScore] = useState<number>(0);
+  const [votingComentarios, setVotingComentarios] = useState("");
+  const [votingLoading, setVotingLoading] = useState(false);
+
+  const countdown = useCountdown(votingDeadline);
 
   async function loadPostulaciones(showRefreshingState: boolean) {
     if (showRefreshingState) {
@@ -58,6 +137,7 @@ export function PostulacionesPanel() {
 
       setHeaders(Array.isArray(data.headers) ? data.headers : []);
       setRows(Array.isArray(data.rows) ? data.rows : []);
+      setVotingDeadline(data.votingDeadline ?? null);
       setLastSyncAt(data.fetchedAt ?? new Date().toISOString());
       setError(null);
     } catch (err) {
@@ -65,6 +145,43 @@ export function PostulacionesPanel() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function submitVote() {
+    if (!votingRowIndex || votingScore === 0) {
+      return;
+    }
+
+    setVotingLoading(true);
+
+    try {
+      const response = await fetch("/api/discord/postulaciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postulacionIndex: votingRowIndex,
+          score: votingScore,
+          comentarios: votingComentarios || null,
+        }),
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Error al guardar la evaluación");
+      }
+
+      setVotingRowIndex(null);
+      setVotingScore(0);
+      setVotingComentarios("");
+      setVotingLoading(false);
+
+      await loadPostulaciones(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+      setVotingLoading(false);
     }
   }
 
@@ -86,11 +203,13 @@ export function PostulacionesPanel() {
     }
 
     if (rows.length > 0) {
-      return rows[0].map((_, idx) => `Columna ${idx + 1}`);
+      return rows[0].rowData.map((_, idx) => `Columna ${idx + 1}`);
     }
 
     return [];
   }, [headers, rows]);
+
+  const votingActive = !countdown?.isExpired && votingDeadline;
 
   if (loading) {
     return (
@@ -132,15 +251,38 @@ export function PostulacionesPanel() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => loadPostulaciones(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-white)] transition-colors hover:bg-white/[0.08]"
-          disabled={refreshing}
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-          {refreshing ? "Actualizando" : "Actualizar"}
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {votingDeadline && (
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/80">
+                {countdown?.isExpired ? "Votación cerrada" : "Tiempo hasta cierre"}
+              </p>
+              {countdown && (
+                <p
+                  className={`mt-1 text-sm font-mono font-bold ${
+                    countdown.isExpired
+                      ? "text-[#fb7185]"
+                      : countdown.days === 0 && countdown.hours === 0
+                        ? "text-[#facc15]"
+                        : "text-[#34d399]"
+                  }`}
+                >
+                  {countdown.days}d {countdown.hours}h {countdown.minutes}m {countdown.seconds}s
+                </p>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => loadPostulaciones(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-white)] transition-colors hover:bg-white/[0.08]"
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "Actualizando" : "Actualizar"}
+          </button>
+        </div>
       </div>
 
       {rows.length === 0 ? (
@@ -148,35 +290,184 @@ export function PostulacionesPanel() {
           No hay respuestas registradas todavía.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.08] bg-white/[0.02]">
-                {tableHeaders.map((header) => (
-                  <th
-                    key={header}
-                    className="whitespace-nowrap px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-neutral-grey)]"
-                  >
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, rowIndex) => (
-                <tr key={`${rowIndex}-${row.join("|")}`} className="border-b border-white/[0.05] last:border-b-0">
-                  {tableHeaders.map((_, columnIndex) => (
-                    <td
-                      key={`${rowIndex}-${columnIndex}`}
-                      className="max-w-[24rem] px-4 py-2.5 align-top text-[13px] text-[var(--color-neutral-white)]"
-                    >
-                      <span className="line-clamp-3 whitespace-pre-wrap break-words">{row[columnIndex] ?? ""}</span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-3 p-4">
+          {rows.map((row) => {
+            const isExpanded = expandedIndex === row.rowIndex;
+            const isVoting = votingRowIndex === row.rowIndex;
+
+            return (
+              <UICard
+                key={row.rowIndex}
+                className="border-white/10 bg-white/[0.02] p-4 hover:border-white/20"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedIndex(isExpanded ? null : row.rowIndex)}
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-neutral-white)] line-clamp-2">
+                        {row.rowData[0] ?? "Sin título"}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
+                        {row.evaluations.length} evaluación{row.evaluations.length !== 1 ? "es" : ""}
+                      </p>
+                    </div>
+
+                    {row.averageScore !== null && (
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-[#ffac00]">{row.averageScore.toFixed(2)}</p>
+                          <p className="text-[10px] text-[var(--color-neutral-grey)]">/ 5</p>
+                        </div>
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-3 w-3 ${
+                                star <= Math.round(row.averageScore || 0)
+                                  ? "fill-[#ffac00] text-[#ffac00]"
+                                  : "text-[var(--color-neutral-grey)]/30"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-4 border-t border-white/[0.08] pt-4 space-y-4">
+                      {/* Evaluaciones existentes */}
+                      {row.evaluations.length > 0 && (
+                        <div>
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">
+                            Evaluaciones ({row.evaluations.length})
+                          </p>
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {row.evaluations.map((evaluation, idx) => (
+                              <div key={idx} className="rounded-lg bg-white/[0.03] p-3 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-medium text-[var(--color-neutral-white)]">
+                                    {evaluation.evaluatorName}
+                                  </p>
+                                  <div className="flex items-center gap-1">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-3 w-3 ${
+                                          i < evaluation.score
+                                            ? "fill-[#ffac00] text-[#ffac00]"
+                                            : "text-[var(--color-neutral-grey)]/30"
+                                        }`}
+                                      />
+                                    ))}
+                                    <span className="ml-2 font-bold text-[#ffac00]">{evaluation.score}</span>
+                                  </div>
+                                </div>
+                                {evaluation.comentarios && (
+                                  <p className="mt-1 text-[var(--color-neutral-grey)]">{evaluation.comentarios}</p>
+                                )}
+                                <p className="mt-1 text-[10px] text-[var(--color-neutral-grey)]/60">
+                                  {formatDateTime(evaluation.createdAt)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Form de votación */}
+                      {votingActive && !isVoting && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setVotingRowIndex(row.rowIndex);
+                            setVotingScore(row.currentUserVote?.score || 0);
+                            setVotingComentarios(row.currentUserVote?.comentarios || "");
+                          }}
+                          className="w-full rounded-lg border border-[#34d399]/40 bg-[#34d399]/12 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/20"
+                        >
+                          {row.currentUserVote ? "Editar mi voto" : "Votar"}
+                        </button>
+                      )}
+
+                      {/* Voting UI */}
+                      {isVoting && (
+                        <div
+                          className="mt-4 space-y-3 rounded-lg bg-white/[0.03] p-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]">
+                              Mi calificación
+                            </p>
+                            <div className="flex gap-3">
+                              {[1, 2, 3, 4, 5].map((score) => (
+                                <button
+                                  key={score}
+                                  type="button"
+                                  onClick={() => setVotingScore(score)}
+                                  className={`rounded-lg px-3 py-2 font-bold transition-all ${
+                                    votingScore === score
+                                      ? "bg-[#ffac00]/40 text-[#ffac00]"
+                                      : "bg-white/[0.05] text-[var(--color-neutral-grey)] hover:bg-white/[0.1]"
+                                  }`}
+                                >
+                                  <Star
+                                    className={`inline h-4 w-4 ${
+                                      votingScore >= score ? "fill-current" : ""
+                                    }`}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]">
+                              Comentarios (opcional)
+                            </label>
+                            <textarea
+                              value={votingComentarios}
+                              onChange={(e) => setVotingComentarios(e.target.value)}
+                              className="mt-2 w-full rounded-lg bg-white/[0.05] p-2 text-xs text-[var(--color-neutral-white)] placeholder-[var(--color-neutral-grey)]/50 focus:outline-none focus:ring-1 focus:ring-[#ffac00]"
+                              placeholder="Agrega comentarios opcionales..."
+                              rows={3}
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setVotingRowIndex(null);
+                                setVotingScore(0);
+                                setVotingComentarios("");
+                              }}
+                              className="flex-1 rounded-lg border border-[var(--color-neutral-grey)]/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)] transition-colors hover:bg-white/[0.05]"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={submitVote}
+                              disabled={votingScore === 0 || votingLoading}
+                              className="flex-1 rounded-lg bg-[#34d399]/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/60 disabled:opacity-50"
+                            >
+                              {votingLoading ? "Guardando..." : "Guardar voto"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </button>
+              </UICard>
+            );
+          })}
         </div>
       )}
     </UICard>
