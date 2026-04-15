@@ -187,36 +187,6 @@ function isValidDiscordId(value: string) {
   return /^\d{17,20}$/.test(value);
 }
 
-async function ensurePromotionCohortArchiveTable() {
-  const { prisma } = await import("@/lib/prisma");
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "PromotionCohortArchive" (
-      "id" TEXT PRIMARY KEY,
-      "cohortName" TEXT NOT NULL,
-      "cohortStartDate" TEXT NOT NULL,
-      "cohortEndDate" TEXT NOT NULL,
-      "votingDeadlineIso" TIMESTAMP(3),
-      "totalMembers" INTEGER NOT NULL,
-      "passedMembers" INTEGER NOT NULL,
-      "failedMembers" INTEGER NOT NULL,
-      "memberResults" JSONB NOT NULL,
-      "archivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "closedByDiscordId" TEXT
-    )
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE INDEX IF NOT EXISTS "idx_PromotionCohortArchive_archivedAt"
-    ON "PromotionCohortArchive" ("archivedAt" DESC)
-  `);
-
-  await prisma.$executeRawUnsafe(`
-    CREATE INDEX IF NOT EXISTS "idx_PromotionCohortArchive_cohortName"
-    ON "PromotionCohortArchive" ("cohortName")
-  `);
-}
-
 async function ensureEvaluationTable() {
   const { prisma } = await import("@/lib/prisma");
 
@@ -515,96 +485,10 @@ async function processVotingClosureTransition(input: {
     `;
   }
 
-  // Archive the completed cohort
-  const activeCohort = await loadActiveCohort();
-  if (activeCohort) {
-    await ensurePromotionCohortArchiveTable();
-
-    // Calculate final results for all supports
-    const allResults: Array<{
-      displayName: string;
-      decision: "Pasa" | "No Pasa" | "Pendiente";
-      stage: string;
-      averageScore: number | null;
-    }> = [];
-
-    for (const support of roster.supports) {
-      const supportRows = rowsBySupport.get(support.id) ?? [];
-      const completed = supportRows.length;
-      const totalScore = supportRows.reduce((sum, row) => sum + row.score, 0);
-      const average = completed > 0 ? Number((totalScore / completed).toFixed(2)) : null;
-      const allEvaluated = requiredEvaluations > 0 && completed >= requiredEvaluations;
-      const canFinalizeByDeadline = completed > 0;
-      const isFinalized = allEvaluated || canFinalizeByDeadline;
-      const decision: "Pasa" | "No Pasa" | "Pendiente" = isFinalized
-        ? (average ?? 0) >= 7
-          ? "Pasa"
-          : "No Pasa"
-        : "Pendiente";
-
-      allResults.push({
-        displayName: support.displayName,
-        decision,
-        stage: decision === "Pasa" ? "Primera ronda" : "Segunda ronda",
-        averageScore: average,
-      });
-    }
-
-    const passedCount = allResults.filter((r) => r.decision === "Pasa").length;
-    const failedCount = allResults.filter((r) => r.decision === "No Pasa").length;
-
-    await prisma.$executeRaw`
-      INSERT INTO "PromotionCohortArchive" (
-        "id",
-        "cohortName",
-        "cohortStartDate",
-        "cohortEndDate",
-        "votingDeadlineIso",
-        "totalMembers",
-        "passedMembers",
-        "failedMembers",
-        "memberResults",
-        "archivedAt",
-        "closedByDiscordId"
-      ) VALUES (
-        ${activeCohort.id + "-archived"},
-        ${activeCohort.cohortName},
-        ${activeCohort.cohortStartDate},
-        ${activeCohort.cohortEndDate},
-        ${votingDeadlineIso},
-        ${roster.supports.length},
-        ${passedCount},
-        ${failedCount},
-        ${JSON.stringify(allResults)},
-        NOW(),
-        ${null}
-      )
-    `;
-
-    // Clear the active cohort
-    await prisma.$executeRaw`
-      DELETE FROM "PromotionEvaluationCohort"
-      WHERE "id" = ${activeCohort.id}
-    `;
-
-    // Clear second evaluation candidates and related tables
-    await prisma.$executeRaw`
-      DELETE FROM "PromotionSecondEvaluationCandidate"
-    `;
-
-    await prisma.$executeRaw`
-      DELETE FROM "SupportPromotionSecondEvaluation"
-    `;
-
-    await prisma.$executeRaw`
-      DELETE FROM "SupportPromotionEvaluationHistory"
-    `;
-  }
-
   await prisma.$executeRaw`
     UPDATE "PromotionEvaluationSettings"
     SET
-      "secondEvaluationEnabled" = FALSE,
+      "secondEvaluationEnabled" = TRUE,
       "closeProcessedAt" = NOW(),
       "votingDeadlineIso" = NULL,
       "updatedAt" = NOW()
