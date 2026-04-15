@@ -51,6 +51,10 @@ type PromotionSettingsUpdateBody = {
   votingDeadlineIso?: string | null;
 };
 
+type PromotionFinalizationActionBody = {
+  action?: "finalize" | "register-cohort";
+};
+
 type PromotionEvaluationSettingsRow = {
   id: number;
   votingDeadlineIso: Date | null;
@@ -183,6 +187,35 @@ async function fetchGuildMembers(guildId: string, botToken: string) {
   return collected;
 }
 
+async function loadSupportsByExactRoleId(input: {
+  guildId: string;
+  botToken: string;
+  supportRoleId: string;
+}) {
+  const members = await fetchGuildMembers(input.guildId, input.botToken);
+
+  return members
+    .map((member) => {
+      const userId = member.user?.id?.trim() ?? "";
+      if (!isValidDiscordId(userId)) {
+        return null;
+      }
+
+      const roleIds = Array.isArray(member.roles) ? member.roles : [];
+      if (!roleIds.includes(input.supportRoleId)) {
+        return null;
+      }
+
+      return {
+        id: userId,
+        displayName: displayNameFor(member),
+        username: member.user?.username?.trim() ?? "",
+      };
+    })
+    .filter((item): item is { id: string; displayName: string; username: string } => Boolean(item))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, "es", { sensitivity: "base" }));
+}
+
 function displayNameFor(member: DiscordGuildMember) {
   const id = member.user?.id?.trim() ?? "";
   return (
@@ -296,31 +329,6 @@ async function ensurePromotionCohortArchiveTable() {
       "closedByDiscordId" TEXT
     )
   `);
-}
-
-async function ensureDefaultCohort(supportIds: string[]) {
-  const { prisma } = await import("@/lib/prisma");
-
-  await ensurePromotionCohortTable();
-
-  await prisma.$executeRaw`
-    INSERT INTO "PromotionEvaluationCohort" (
-      "id",
-      "cohortName",
-      "cohortStartDate",
-      "cohortEndDate",
-      "supportDiscordIds",
-      "updatedAt"
-    ) VALUES (
-      ${"cohort-01"},
-      ${"Primera camada"},
-      ${"07/03/2026"},
-      ${"02/04/2026"},
-      ${supportIds},
-      NOW()
-    )
-    ON CONFLICT ("id") DO NOTHING
-  `;
 }
 
 async function loadPromotionSettings() {
@@ -850,7 +858,6 @@ export async function GET() {
 
   try {
     const roster = await loadRoster();
-    await ensureDefaultCohort(roster.supports.map((item) => item.id));
 
     let settingsRow = await loadPromotionSettings();
     if (settingsRow) {
@@ -893,10 +900,15 @@ export async function GET() {
       rowsBySupport.set(row.supportDiscordId, currentRows);
     }
 
+    const activeCohortSupportIds = new Set(activeCohort?.supportDiscordIds ?? []);
     const firstRoundSupportIds = new Set(rows.map((row) => row.supportDiscordId));
-    const supportsForFirstEvaluation = secondEvaluationEnabled
-      ? effectiveRoster.supports.filter((support) => firstRoundSupportIds.has(support.id))
-      : effectiveRoster.supports;
+    const supportsForFirstEvaluation = activeCohort
+      ? (secondEvaluationEnabled
+          ? effectiveRoster.supports.filter(
+              (support) => activeCohortSupportIds.has(support.id) && firstRoundSupportIds.has(support.id)
+            )
+          : effectiveRoster.supports.filter((support) => activeCohortSupportIds.has(support.id)))
+      : [];
 
     const secondEvaluationRowsBySupport = new Map<string, SecondEvaluationRow[]>();
     const firstRoundHistoryBySupport = new Map<string, FirstRoundHistoryRow[]>();
@@ -1041,7 +1053,9 @@ export async function GET() {
 
     const supportById = new Map(effectiveRoster.supports.map((support) => [support.id, support]));
 
-    const secondSupports = secondEvaluationCandidates.map((candidate) => {
+    const secondSupports = secondEvaluationCandidates
+      .filter((candidate) => !activeCohort || activeCohortSupportIds.has(candidate.supportDiscordId))
+      .map((candidate) => {
       const support = supportById.get(candidate.supportDiscordId);
       const supportRows = secondEvaluationRowsBySupport.get(candidate.supportDiscordId) ?? [];
       const previousRows = firstRoundHistoryBySupport.get(candidate.supportDiscordId) ?? [];
@@ -1093,10 +1107,11 @@ export async function GET() {
           })),
         },
       };
-    });
+      });
 
     const canSaveFinalResult =
       secondEvaluationEnabled &&
+      Boolean(activeCohort) &&
       Boolean(settingsRow?.closeProcessedAt) &&
       !settingsRow?.finalizedAt &&
       finalizationOpenByDeadline &&
@@ -1155,6 +1170,10 @@ export async function GET() {
         isFinalized: Boolean(settingsRow?.finalizedAt),
         finalizedAt: settingsRow?.finalizedAt ? new Date(settingsRow.finalizedAt).toISOString() : null,
         finalizedByDiscordId: settingsRow?.finalizedByDiscordId ?? null,
+      },
+      cohortRegistration: {
+        canRegister: canManageDeadlineByRole(session?.user?.staffRole ?? null),
+        hasActiveCohort: Boolean(activeCohort),
       },
     });
   } catch (error) {
@@ -1374,7 +1393,7 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const sessionUser = session?.user;
 
@@ -1383,18 +1402,98 @@ export async function POST() {
   }
 
   try {
+    let body: PromotionFinalizationActionBody = {};
+    try {
+      body = (await request.json()) as PromotionFinalizationActionBody;
+    } catch {
+      body = {};
+    }
+
+    const action = body.action === "register-cohort" ? "register-cohort" : "finalize";
+
     const { prisma } = await import("@/lib/prisma");
 
     const guildId = normalizeDiscordId(process.env.DISCORD_GUILD_ID, "");
     const botToken = process.env.DISCORD_BOT_TOKEN;
     const trialAdminRoleId = normalizeDiscordId(process.env.DISCORD_ROLE_TRIAL_ADMIN_ID, "1493772547702001674");
+    const supportRoleId = normalizeDiscordId(process.env.DISCORD_ROLE_SUPPORT_ID, "1486041737964290211");
 
     if (!guildId || !botToken) {
       return NextResponse.json({ error: "Falta configurar DISCORD_GUILD_ID o DISCORD_BOT_TOKEN" }, { status: 500 });
     }
 
-    if (!isValidDiscordId(trialAdminRoleId)) {
-      return NextResponse.json({ error: "ID del rol Trial Admin invalido" }, { status: 500 });
+    if (!isValidDiscordId(trialAdminRoleId) || !isValidDiscordId(supportRoleId)) {
+      return NextResponse.json({ error: "ID de rol invalido para Trial Admin o Support" }, { status: 500 });
+    }
+
+    if (action === "register-cohort") {
+      await ensurePromotionCohortTable();
+      await ensurePromotionSettingsTable();
+
+      const activeCohort = await loadActiveCohort();
+      if (activeCohort) {
+        return NextResponse.json(
+          { error: "Ya existe una camada activa. Finaliza la actual antes de registrar otra." },
+          { status: 409 }
+        );
+      }
+
+      const supports = await loadSupportsByExactRoleId({
+        guildId,
+        botToken,
+        supportRoleId,
+      });
+
+      if (supports.length === 0) {
+        return NextResponse.json(
+          { error: "No se encontraron miembros con rol Support para registrar una nueva camada." },
+          { status: 409 }
+        );
+      }
+
+      const now = new Date();
+      const nowLabel = now.toLocaleString("es-ES");
+      const cohortId = `cohort-${Date.now()}`;
+
+      await prisma.$executeRaw`
+        INSERT INTO "PromotionEvaluationCohort" (
+          "id",
+          "cohortName",
+          "cohortStartDate",
+          "cohortEndDate",
+          "supportDiscordIds",
+          "updatedAt"
+        ) VALUES (
+          ${cohortId},
+          ${`Camada ${nowLabel}`},
+          ${nowLabel},
+          ${nowLabel},
+          ${supports.map((support) => support.id)},
+          NOW()
+        )
+      `;
+
+      await prisma.$executeRaw`
+        UPDATE "PromotionEvaluationSettings"
+        SET
+          "secondEvaluationEnabled" = FALSE,
+          "closeProcessedAt" = NULL,
+          "votingDeadlineIso" = NULL,
+          "finalizedAt" = NULL,
+          "finalizedByDiscordId" = NULL,
+          "updatedAt" = NOW()
+        WHERE "id" = 1
+      `;
+
+      return NextResponse.json({
+        ok: true,
+        action,
+        cohort: {
+          id: cohortId,
+          name: `Camada ${nowLabel}`,
+          supportCount: supports.length,
+        },
+      });
     }
 
     const settingsRow = await loadPromotionSettings();
@@ -1571,14 +1670,40 @@ export async function POST() {
     await prisma.$executeRaw`
       UPDATE "PromotionEvaluationSettings"
       SET
+        "secondEvaluationEnabled" = FALSE,
+        "closeProcessedAt" = NULL,
+        "votingDeadlineIso" = NULL,
         "finalizedAt" = NOW(),
         "finalizedByDiscordId" = ${sessionUser.discordUserId ?? null},
         "updatedAt" = NOW()
       WHERE "id" = 1
     `;
 
+    if (activeCohort) {
+      await prisma.$executeRaw`
+        DELETE FROM "PromotionCohortCut"
+        WHERE "cohortId" = ${activeCohort.id}
+      `;
+
+      await prisma.$executeRaw`
+        DELETE FROM "PromotionCutEvaluation"
+        WHERE "cohortId" = ${activeCohort.id}
+      `;
+
+      await prisma.$executeRaw`
+        DELETE FROM "PromotionEvaluationCohort"
+        WHERE "id" = ${activeCohort.id}
+      `;
+    }
+
+    await prisma.$executeRaw`DELETE FROM "SupportPromotionEvaluation"`;
+    await prisma.$executeRaw`DELETE FROM "PromotionSecondEvaluationCandidate"`;
+    await prisma.$executeRaw`DELETE FROM "SupportPromotionSecondEvaluation"`;
+    await prisma.$executeRaw`DELETE FROM "SupportPromotionEvaluationHistory"`;
+
     return NextResponse.json({
       ok: true,
+      action,
       promotedCount: passedMembers.length,
       roleAssignedCount,
       roleErrorCount: roleErrors.length,

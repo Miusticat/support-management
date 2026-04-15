@@ -124,6 +124,10 @@ type ApiResponse = {
     finalizedAt?: string | null;
     finalizedByDiscordId?: string | null;
   };
+  cohortRegistration?: {
+    canRegister?: boolean;
+    hasActiveCohort?: boolean;
+  };
   error?: string;
 };
 
@@ -269,10 +273,12 @@ export function PromotionEvaluationPanel() {
   const [deadlineDraft, setDeadlineDraft] = useState("");
   const [savingDeadline, setSavingDeadline] = useState(false);
   const [savingFinalization, setSavingFinalization] = useState(false);
+  const [savingCohortRegistration, setSavingCohortRegistration] = useState(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [selectedSecondSupportId, setSelectedSecondSupportId] = useState<string>("");
   const [canSaveFinalResult, setCanSaveFinalResult] = useState(false);
   const [isFinalized, setIsFinalized] = useState(false);
+  const [canRegisterCohort, setCanRegisterCohort] = useState(false);
 
   async function loadData(showLoading: boolean) {
     if (showLoading) {
@@ -312,6 +318,7 @@ export function PromotionEvaluationPanel() {
       setCanManageDeadline(Boolean(data?.permissions?.canManageDeadline));
       setCanSaveFinalResult(Boolean(data?.finalization?.canSave));
       setIsFinalized(Boolean(data?.finalization?.isFinalized));
+      setCanRegisterCohort(Boolean(data?.cohortRegistration?.canRegister));
       setDeadlineDraft(nextVoting.deadlineIso ? nextVoting.deadlineIso.slice(0, 16) : "");
 
       setScoreDraft((prev) => {
@@ -610,6 +617,12 @@ export function PromotionEvaluationPanel() {
     try {
       const response = await fetch("/api/discord/promotion-evaluations", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "finalize",
+        }),
       });
 
       const data = await parseJsonSafe<{
@@ -650,6 +663,51 @@ export function PromotionEvaluationPanel() {
       setTimeout(() => setMessage(null), 3200);
     } finally {
       setSavingFinalization(false);
+    }
+  }
+
+  async function registerNewCohort() {
+    if (!canRegisterCohort) {
+      setMessage("No tienes permisos para registrar una nueva camada.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+
+    setSavingCohortRegistration(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/discord/promotion-evaluations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "register-cohort",
+        }),
+      });
+
+      const data = await parseJsonSafe<{
+        ok?: boolean;
+        cohort?: { name?: string; supportCount?: number };
+        error?: string;
+      }>(response);
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "No se pudo registrar la nueva camada");
+      }
+
+      setMessage(
+        `Nueva camada registrada: ${data?.cohort?.name ?? "Camada"} (${data?.cohort?.supportCount ?? 0} support(s)).`
+      );
+      setTimeout(() => setMessage(null), 3200);
+      await loadData(false);
+    } catch (registerError) {
+      const registerMessage = registerError instanceof Error ? registerError.message : "Error desconocido";
+      setMessage(registerMessage);
+      setTimeout(() => setMessage(null), 3200);
+    } finally {
+      setSavingCohortRegistration(false);
     }
   }
 
@@ -797,6 +855,7 @@ export function PromotionEvaluationPanel() {
         ) : null}
 
         {!loading && !error ? (
+          cohort ? (
           <>
             <div className="relative z-10 mt-5 grid gap-4 grid-cols-[280px_1fr]">
               <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
@@ -1291,6 +1350,22 @@ export function PromotionEvaluationPanel() {
               </div>
             ) : null}
           </>
+          ) : (
+            <div className="relative z-10 mt-5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <p className="text-sm font-semibold text-[var(--color-neutral-white)]">No hay camada activa</p>
+              <p className="mt-2 text-xs text-[var(--color-neutral-grey)]">
+                Registra una nueva camada para iniciar el flujo de evaluación con los miembros que actualmente tienen el rol Support.
+              </p>
+              <button
+                type="button"
+                onClick={() => void registerNewCohort()}
+                disabled={!canRegisterCohort || savingCohortRegistration || !canManageDeadline}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[#3b82f6]/40 bg-[#3b82f6]/15 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#93c5fd] transition hover:bg-[#3b82f6]/25 disabled:opacity-50"
+              >
+                {savingCohortRegistration ? "Registrando..." : "Registrar nueva camada"}
+              </button>
+            </div>
+          )
         ) : null}
       </UICard>
   );
