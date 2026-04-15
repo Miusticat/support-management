@@ -574,6 +574,44 @@ async function updatePromotionSettings(input: {
   `;
 }
 
+async function cleanupAfterFinalization() {
+  const { prisma } = await import("@/lib/prisma");
+
+  const activeCohort = await loadActiveCohort();
+
+  if (activeCohort) {
+    await prisma.$executeRaw`
+      DELETE FROM "PromotionCohortCut"
+      WHERE "cohortId" = ${activeCohort.id}
+    `;
+
+    await prisma.$executeRaw`
+      DELETE FROM "PromotionCutEvaluation"
+      WHERE "cohortId" = ${activeCohort.id}
+    `;
+
+    await prisma.$executeRaw`
+      DELETE FROM "PromotionEvaluationCohort"
+      WHERE "id" = ${activeCohort.id}
+    `;
+  }
+
+  await prisma.$executeRaw`DELETE FROM "SupportPromotionEvaluation"`;
+  await prisma.$executeRaw`DELETE FROM "PromotionSecondEvaluationCandidate"`;
+  await prisma.$executeRaw`DELETE FROM "SupportPromotionSecondEvaluation"`;
+  await prisma.$executeRaw`DELETE FROM "SupportPromotionEvaluationHistory"`;
+
+  await prisma.$executeRaw`
+    UPDATE "PromotionEvaluationSettings"
+    SET
+      "secondEvaluationEnabled" = FALSE,
+      "closeProcessedAt" = NULL,
+      "votingDeadlineIso" = NULL,
+      "updatedAt" = NOW()
+    WHERE "id" = 1
+  `;
+}
+
 async function assignRoleToMember(input: {
   guildId: string;
   botToken: string;
@@ -860,6 +898,11 @@ export async function GET() {
     const roster = await loadRoster();
 
     let settingsRow = await loadPromotionSettings();
+    if (settingsRow?.finalizedAt) {
+      await cleanupAfterFinalization();
+      settingsRow = await loadPromotionSettings();
+    }
+
     if (settingsRow) {
       await processVotingClosureTransition({
         settingsRow,
@@ -1505,7 +1548,8 @@ export async function POST(request: Request) {
     }
 
     if (settingsRow.finalizedAt) {
-      return NextResponse.json({ ok: true, alreadyFinalized: true });
+      await cleanupAfterFinalization();
+      return NextResponse.json({ ok: true, alreadyFinalized: true, cleanedUp: true });
     }
 
     if (settingsRow.votingDeadlineIso && new Date(settingsRow.votingDeadlineIso).getTime() > Date.now()) {
@@ -1670,36 +1714,13 @@ export async function POST(request: Request) {
     await prisma.$executeRaw`
       UPDATE "PromotionEvaluationSettings"
       SET
-        "secondEvaluationEnabled" = FALSE,
-        "closeProcessedAt" = NULL,
-        "votingDeadlineIso" = NULL,
         "finalizedAt" = NOW(),
         "finalizedByDiscordId" = ${sessionUser.discordUserId ?? null},
         "updatedAt" = NOW()
       WHERE "id" = 1
     `;
 
-    if (activeCohort) {
-      await prisma.$executeRaw`
-        DELETE FROM "PromotionCohortCut"
-        WHERE "cohortId" = ${activeCohort.id}
-      `;
-
-      await prisma.$executeRaw`
-        DELETE FROM "PromotionCutEvaluation"
-        WHERE "cohortId" = ${activeCohort.id}
-      `;
-
-      await prisma.$executeRaw`
-        DELETE FROM "PromotionEvaluationCohort"
-        WHERE "id" = ${activeCohort.id}
-      `;
-    }
-
-    await prisma.$executeRaw`DELETE FROM "SupportPromotionEvaluation"`;
-    await prisma.$executeRaw`DELETE FROM "PromotionSecondEvaluationCandidate"`;
-    await prisma.$executeRaw`DELETE FROM "SupportPromotionSecondEvaluation"`;
-    await prisma.$executeRaw`DELETE FROM "SupportPromotionEvaluationHistory"`;
+    await cleanupAfterFinalization();
 
     return NextResponse.json({
       ok: true,
