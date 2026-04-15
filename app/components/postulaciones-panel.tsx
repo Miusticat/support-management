@@ -294,6 +294,8 @@ export function PostulacionesPanel() {
           {rows.map((row) => {
             const isExpanded = expandedIndex === row.rowIndex;
             const isVoting = votingRowIndex === row.rowIndex;
+            const submittedAt = row.rowData[0] ?? "-";
+            const displayName = row.rowData[1]?.trim() || row.rowData[0] || "Sin título";
 
             return (
               <UICard
@@ -308,10 +310,13 @@ export function PostulacionesPanel() {
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[var(--color-neutral-white)] line-clamp-2">
-                        {row.rowData[0] ?? "Sin título"}
+                        {displayName}
                       </p>
                       <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
-                        {row.evaluations.length} evaluación{row.evaluations.length !== 1 ? "es" : ""}
+                        {formatDateTime(submittedAt)}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
+                        {row.evaluations.length} evaluaci{row.evaluations.length !== 1 ? "ones" : "ón"}
                       </p>
                     </div>
 
@@ -339,6 +344,28 @@ export function PostulacionesPanel() {
 
                   {isExpanded && (
                     <div className="mt-4 border-t border-white/[0.08] pt-4 space-y-4">
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">
+                          Respuestas del formulario
+                        </p>
+                        <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg bg-white/[0.02] p-3">
+                          {tableHeaders.map((header, idx) => {
+                            const value = row.rowData[idx] ?? "";
+
+                            return (
+                              <div key={`${row.rowIndex}-field-${idx}`} className="rounded-md bg-white/[0.03] p-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--color-neutral-grey)]/70">
+                                  {header}
+                                </p>
+                                <p className="mt-1 whitespace-pre-wrap break-words text-xs text-[var(--color-neutral-white)]">
+                                  {value.trim().length > 0 ? value : "-"}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
                       {/* Evaluaciones existentes */}
                       {row.evaluations.length > 0 && (
                         <div>
