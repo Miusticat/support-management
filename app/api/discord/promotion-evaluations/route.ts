@@ -197,6 +197,11 @@ function isValidDiscordId(value: string) {
   return /^\d{17,20}$/.test(value);
 }
 
+function normalizeDiscordId(value: string | undefined, fallback: string) {
+  const normalized = (value ?? fallback).trim().replace(/^"|"$/g, "");
+  return normalized || fallback;
+}
+
 async function ensureEvaluationTable() {
   const { prisma } = await import("@/lib/prisma");
 
@@ -1380,9 +1385,9 @@ export async function POST() {
   try {
     const { prisma } = await import("@/lib/prisma");
 
-    const guildId = process.env.DISCORD_GUILD_ID;
+    const guildId = normalizeDiscordId(process.env.DISCORD_GUILD_ID, "");
     const botToken = process.env.DISCORD_BOT_TOKEN;
-    const trialAdminRoleId = (process.env.DISCORD_ROLE_TRIAL_ADMIN_ID ?? "1493772547702001674").trim();
+    const trialAdminRoleId = normalizeDiscordId(process.env.DISCORD_ROLE_TRIAL_ADMIN_ID, "1493772547702001674");
 
     if (!guildId || !botToken) {
       return NextResponse.json({ error: "Falta configurar DISCORD_GUILD_ID o DISCORD_BOT_TOKEN" }, { status: 500 });
@@ -1450,40 +1455,58 @@ export async function POST() {
     }
 
     const supportById = new Map(roster.supports.map((support) => [support.id, support]));
-    const requiredEvaluations = roster.evaluators.length;
+    const secondCandidateIds = new Set(secondCandidates.map((candidate) => candidate.supportDiscordId));
+    const memberIds = new Set<string>();
+
+    for (const supportId of firstBySupport.keys()) {
+      memberIds.add(supportId);
+    }
+
+    for (const supportId of secondCandidateIds.values()) {
+      memberIds.add(supportId);
+    }
+
+    if (memberIds.size === 0) {
+      return NextResponse.json(
+        { error: "No hay miembros evaluados para guardar el cierre final." },
+        { status: 409 }
+      );
+    }
+
     const members: PromotionCohortArchiveMember[] = [];
 
-    for (const support of roster.supports) {
-      const candidate = secondCandidates.find((item) => item.supportDiscordId === support.id);
+    for (const supportId of memberIds.values()) {
+      if (!isValidDiscordId(supportId)) {
+        continue;
+      }
 
-      if (!candidate) {
-        const rows = firstBySupport.get(support.id) ?? [];
-        const completed = rows.length;
+      const displayName = supportById.get(supportId)?.displayName ?? supportId;
+
+      if (secondCandidateIds.has(supportId)) {
+        const rows = secondBySupport.get(supportId) ?? [];
         const total = rows.reduce((sum, row) => sum + row.score, 0);
-        const average = completed > 0 ? Number((total / completed).toFixed(2)) : null;
-        const allEvaluated = requiredEvaluations > 0 && completed >= requiredEvaluations;
-        const canFinalizeByDeadline = completed > 0;
-        const passed = (allEvaluated || canFinalizeByDeadline) && (average ?? 0) >= 7;
+        const average = rows.length > 0 ? Number((total / rows.length).toFixed(2)) : null;
 
         members.push({
-          supportDiscordId: support.id,
-          displayName: support.displayName,
-          decision: passed ? "Pasa" : "No Pasa",
-          stage: "Primera ronda",
+          supportDiscordId: supportId,
+          displayName,
+          decision: (average ?? 0) >= 7 ? "Pasa" : "No Pasa",
+          stage: "Segunda ronda",
           averageScore: average,
         });
         continue;
       }
 
-      const rows = secondBySupport.get(support.id) ?? [];
+      const rows = firstBySupport.get(supportId) ?? [];
+      const completed = rows.length;
       const total = rows.reduce((sum, row) => sum + row.score, 0);
-      const average = rows.length > 0 ? Number((total / rows.length).toFixed(2)) : null;
+      const average = completed > 0 ? Number((total / completed).toFixed(2)) : null;
 
       members.push({
-        supportDiscordId: support.id,
-        displayName: support.displayName,
+        supportDiscordId: supportId,
+        displayName,
         decision: (average ?? 0) >= 7 ? "Pasa" : "No Pasa",
-        stage: "Segunda ronda",
+        stage: "Primera ronda",
         averageScore: average,
       });
     }
