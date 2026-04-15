@@ -57,6 +57,8 @@ type PromotionEvaluationSettingsRow = {
   createdByDiscordId: string | null;
   secondEvaluationEnabled: boolean;
   closeProcessedAt: Date | null;
+  finalizedAt: Date | null;
+  finalizedByDiscordId: string | null;
   updatedAt: Date;
 };
 
@@ -118,6 +120,14 @@ type FirstRoundHistoryRow = {
   score: number;
   notes: string | null;
   updatedAt: Date;
+};
+
+type PromotionCohortArchiveMember = {
+  supportDiscordId: string;
+  displayName: string;
+  decision: "Pasa" | "No Pasa";
+  stage: "Primera ronda" | "Segunda ronda";
+  averageScore: number | null;
 };
 
 function canEvaluateByRole(roleName: string | null | undefined) {
@@ -214,6 +224,8 @@ async function ensurePromotionSettingsTable() {
       "createdByDiscordId" TEXT,
       "secondEvaluationEnabled" BOOLEAN NOT NULL DEFAULT FALSE,
       "closeProcessedAt" TIMESTAMP(3),
+      "finalizedAt" TIMESTAMP(3),
+      "finalizedByDiscordId" TEXT,
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -226,6 +238,16 @@ async function ensurePromotionSettingsTable() {
   await prisma.$executeRawUnsafe(`
     ALTER TABLE "PromotionEvaluationSettings"
     ADD COLUMN IF NOT EXISTS "closeProcessedAt" TIMESTAMP(3)
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "PromotionEvaluationSettings"
+    ADD COLUMN IF NOT EXISTS "finalizedAt" TIMESTAMP(3)
+  `);
+
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "PromotionEvaluationSettings"
+    ADD COLUMN IF NOT EXISTS "finalizedByDiscordId" TEXT
   `);
 
   await prisma.$executeRawUnsafe(`
@@ -247,6 +269,26 @@ async function ensurePromotionCohortTable() {
       "supportDiscordIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
       "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function ensurePromotionCohortArchiveTable() {
+  const { prisma } = await import("@/lib/prisma");
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PromotionCohortArchive" (
+      "id" TEXT PRIMARY KEY,
+      "cohortName" TEXT NOT NULL,
+      "cohortStartDate" TEXT NOT NULL,
+      "cohortEndDate" TEXT NOT NULL,
+      "votingDeadlineIso" TIMESTAMP(3),
+      "totalMembers" INTEGER NOT NULL,
+      "passedMembers" INTEGER NOT NULL,
+      "failedMembers" INTEGER NOT NULL,
+      "memberResults" JSONB NOT NULL,
+      "archivedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "closedByDiscordId" TEXT
     )
   `);
 }
@@ -287,6 +329,8 @@ async function loadPromotionSettings() {
       "createdByDiscordId",
       "secondEvaluationEnabled",
       "closeProcessedAt",
+      "finalizedAt",
+      "finalizedByDiscordId",
       "updatedAt"
     FROM "PromotionEvaluationSettings"
     WHERE "id" = 1
@@ -490,6 +534,8 @@ async function processVotingClosureTransition(input: {
     SET
       "secondEvaluationEnabled" = TRUE,
       "closeProcessedAt" = NOW(),
+      "finalizedAt" = NULL,
+      "finalizedByDiscordId" = NULL,
       "votingDeadlineIso" = NULL,
       "updatedAt" = NOW()
     WHERE "id" = 1
@@ -508,9 +554,35 @@ async function updatePromotionSettings(input: {
     SET
       "votingDeadlineIso" = ${input.votingDeadlineIso},
       "createdByDiscordId" = ${input.createdByDiscordId},
+      "finalizedAt" = NULL,
+      "finalizedByDiscordId" = NULL,
       "updatedAt" = NOW()
     WHERE "id" = 1
   `;
+}
+
+async function assignRoleToMember(input: {
+  guildId: string;
+  botToken: string;
+  memberDiscordId: string;
+  roleId: string;
+}) {
+  const response = await fetch(
+    `https://discord.com/api/v10/guilds/${input.guildId}/members/${input.memberDiscordId}/roles/${input.roleId}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bot ${input.botToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `No se pudo asignar rol a ${input.memberDiscordId}. Discord ${response.status}: ${detail.slice(0, 160) || "Unknown error"}`
+    );
+  }
 }
 
 async function loadActiveCohort() {
@@ -799,6 +871,8 @@ export async function GET() {
     }
 
     const secondEvaluationEnabled = Boolean(settingsRow?.secondEvaluationEnabled);
+    const finalizationOpenByDeadline =
+      !settingsRow?.votingDeadlineIso || new Date(settingsRow.votingDeadlineIso).getTime() <= Date.now();
     const effectiveRoster = roster;
     const requiredEvaluations = effectiveRoster.evaluators.length;
     const votingDeadlineIso = settingsRow?.votingDeadlineIso ? new Date(settingsRow.votingDeadlineIso) : null;
@@ -1016,6 +1090,13 @@ export async function GET() {
       };
     });
 
+    const canSaveFinalResult =
+      secondEvaluationEnabled &&
+      Boolean(settingsRow?.closeProcessedAt) &&
+      !settingsRow?.finalizedAt &&
+      finalizationOpenByDeadline &&
+      secondSupports.every((support) => support.decision !== "Pendiente");
+
     return NextResponse.json({
       supports: supportsResolved,
       secondEvaluation: {
@@ -1063,6 +1144,12 @@ export async function GET() {
       },
       permissions: {
         canManageDeadline: canManageDeadlineByRole(session?.user?.staffRole ?? null),
+      },
+      finalization: {
+        canSave: canSaveFinalResult,
+        isFinalized: Boolean(settingsRow?.finalizedAt),
+        finalizedAt: settingsRow?.finalizedAt ? new Date(settingsRow.finalizedAt).toISOString() : null,
+        finalizedByDiscordId: settingsRow?.finalizedByDiscordId ?? null,
       },
     });
   } catch (error) {
@@ -1275,6 +1362,210 @@ export async function PATCH(request: Request) {
         isClosed: Boolean(nextDeadline && nextDeadline.getTime() <= Date.now()),
         managedByDiscordId: sessionUser.discordUserId ?? null,
       },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
+
+export async function POST() {
+  const session = await getServerSession(authOptions);
+  const sessionUser = session?.user;
+
+  if (!sessionUser?.id || !canManageDeadlineByRole(sessionUser.staffRole ?? null)) {
+    return NextResponse.json({ error: "Solo Support Lead puede guardar el cierre final." }, { status: 403 });
+  }
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+
+    const guildId = process.env.DISCORD_GUILD_ID;
+    const botToken = process.env.DISCORD_BOT_TOKEN;
+    const trialAdminRoleId = (process.env.DISCORD_ROLE_TRIAL_ADMIN_ID ?? "1493772547702001674").trim();
+
+    if (!guildId || !botToken) {
+      return NextResponse.json({ error: "Falta configurar DISCORD_GUILD_ID o DISCORD_BOT_TOKEN" }, { status: 500 });
+    }
+
+    if (!isValidDiscordId(trialAdminRoleId)) {
+      return NextResponse.json({ error: "ID del rol Trial Admin invalido" }, { status: 500 });
+    }
+
+    const settingsRow = await loadPromotionSettings();
+    if (!settingsRow?.secondEvaluationEnabled || !settingsRow.closeProcessedAt) {
+      return NextResponse.json(
+        { error: "Debes cerrar la primera ronda y completar la segunda antes de guardar." },
+        { status: 409 }
+      );
+    }
+
+    if (settingsRow.finalizedAt) {
+      return NextResponse.json({ ok: true, alreadyFinalized: true });
+    }
+
+    if (settingsRow.votingDeadlineIso && new Date(settingsRow.votingDeadlineIso).getTime() > Date.now()) {
+      return NextResponse.json(
+        { error: "La segunda ronda aun esta abierta. Espera al cierre para guardar." },
+        { status: 409 }
+      );
+    }
+
+    const roster = await loadRoster();
+    await ensureEvaluationTable();
+    await ensureSecondEvaluationCandidateTable();
+    await ensureSecondEvaluationTable();
+    await ensurePromotionCohortArchiveTable();
+
+    const [firstRoundRows, secondCandidates, secondRows, activeCohort] = await Promise.all([
+      loadEvaluations(),
+      loadSecondEvaluationCandidates(),
+      loadSecondEvaluations(),
+      loadActiveCohort(),
+    ]);
+
+    const firstBySupport = new Map<string, EvaluationRow[]>();
+    for (const row of firstRoundRows) {
+      const current = firstBySupport.get(row.supportDiscordId) ?? [];
+      current.push(row);
+      firstBySupport.set(row.supportDiscordId, current);
+    }
+
+    const secondBySupport = new Map<string, SecondEvaluationRow[]>();
+    for (const row of secondRows) {
+      const current = secondBySupport.get(row.supportDiscordId) ?? [];
+      current.push(row);
+      secondBySupport.set(row.supportDiscordId, current);
+    }
+
+    const secondPending = secondCandidates.filter(
+      (candidate) => (secondBySupport.get(candidate.supportDiscordId) ?? []).length === 0
+    );
+
+    if (secondPending.length > 0) {
+      return NextResponse.json(
+        { error: "Aun hay supports pendientes por evaluar en segunda ronda." },
+        { status: 409 }
+      );
+    }
+
+    const supportById = new Map(roster.supports.map((support) => [support.id, support]));
+    const requiredEvaluations = roster.evaluators.length;
+    const members: PromotionCohortArchiveMember[] = [];
+
+    for (const support of roster.supports) {
+      const candidate = secondCandidates.find((item) => item.supportDiscordId === support.id);
+
+      if (!candidate) {
+        const rows = firstBySupport.get(support.id) ?? [];
+        const completed = rows.length;
+        const total = rows.reduce((sum, row) => sum + row.score, 0);
+        const average = completed > 0 ? Number((total / completed).toFixed(2)) : null;
+        const allEvaluated = requiredEvaluations > 0 && completed >= requiredEvaluations;
+        const canFinalizeByDeadline = completed > 0;
+        const passed = (allEvaluated || canFinalizeByDeadline) && (average ?? 0) >= 7;
+
+        members.push({
+          supportDiscordId: support.id,
+          displayName: support.displayName,
+          decision: passed ? "Pasa" : "No Pasa",
+          stage: "Primera ronda",
+          averageScore: average,
+        });
+        continue;
+      }
+
+      const rows = secondBySupport.get(support.id) ?? [];
+      const total = rows.reduce((sum, row) => sum + row.score, 0);
+      const average = rows.length > 0 ? Number((total / rows.length).toFixed(2)) : null;
+
+      members.push({
+        supportDiscordId: support.id,
+        displayName: support.displayName,
+        decision: (average ?? 0) >= 7 ? "Pasa" : "No Pasa",
+        stage: "Segunda ronda",
+        averageScore: average,
+      });
+    }
+
+    const passedMembers = members.filter((member) => member.decision === "Pasa");
+    const roleErrors: string[] = [];
+
+    for (const member of passedMembers) {
+      try {
+        await assignRoleToMember({
+          guildId,
+          botToken,
+          memberDiscordId: member.supportDiscordId,
+          roleId: trialAdminRoleId,
+        });
+      } catch (error) {
+        const fallbackName = supportById.get(member.supportDiscordId)?.displayName ?? member.supportDiscordId;
+        roleErrors.push(error instanceof Error ? `${fallbackName}: ${error.message}` : fallbackName);
+      }
+    }
+
+    if (roleErrors.length > 0) {
+      return NextResponse.json(
+        {
+          error: `No se pudo asignar el rol Trial Admin a ${roleErrors.length} miembro(s).`,
+          details: roleErrors,
+        },
+        { status: 502 }
+      );
+    }
+
+    const cohortId = activeCohort?.id ?? "cohort-final";
+    const cohortName = activeCohort?.cohortName ?? "Camada activa";
+    const cohortStartDate = activeCohort?.cohortStartDate ?? "-";
+    const cohortEndDate = activeCohort?.cohortEndDate ?? "-";
+
+    await prisma.$executeRaw`
+      INSERT INTO "PromotionCohortArchive" (
+        "id",
+        "cohortName",
+        "cohortStartDate",
+        "cohortEndDate",
+        "votingDeadlineIso",
+        "totalMembers",
+        "passedMembers",
+        "failedMembers",
+        "memberResults",
+        "archivedAt",
+        "closedByDiscordId"
+      ) VALUES (
+        ${`${cohortId}-${Date.now()}`},
+        ${cohortName},
+        ${cohortStartDate},
+        ${cohortEndDate},
+        ${settingsRow.votingDeadlineIso},
+        ${members.length},
+        ${passedMembers.length},
+        ${members.length - passedMembers.length},
+        ${JSON.stringify(members.map((member) => ({
+          displayName: member.displayName,
+          decision: member.decision,
+          stage: member.stage,
+          averageScore: member.averageScore,
+        })))},
+        NOW(),
+        ${sessionUser.discordUserId ?? null}
+      )
+    `;
+
+    await prisma.$executeRaw`
+      UPDATE "PromotionEvaluationSettings"
+      SET
+        "finalizedAt" = NOW(),
+        "finalizedByDiscordId" = ${sessionUser.discordUserId ?? null},
+        "updatedAt" = NOW()
+      WHERE "id" = 1
+    `;
+
+    return NextResponse.json({
+      ok: true,
+      promotedCount: passedMembers.length,
+      roleId: trialAdminRoleId,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

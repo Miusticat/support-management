@@ -118,6 +118,12 @@ type ApiResponse = {
   permissions?: {
     canManageDeadline?: boolean;
   };
+  finalization?: {
+    canSave?: boolean;
+    isFinalized?: boolean;
+    finalizedAt?: string | null;
+    finalizedByDiscordId?: string | null;
+  };
   error?: string;
 };
 
@@ -262,8 +268,11 @@ export function PromotionEvaluationPanel() {
   const [canManageDeadline, setCanManageDeadline] = useState(false);
   const [deadlineDraft, setDeadlineDraft] = useState("");
   const [savingDeadline, setSavingDeadline] = useState(false);
+  const [savingFinalization, setSavingFinalization] = useState(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [selectedSecondSupportId, setSelectedSecondSupportId] = useState<string>("");
+  const [canSaveFinalResult, setCanSaveFinalResult] = useState(false);
+  const [isFinalized, setIsFinalized] = useState(false);
 
   async function loadData(showLoading: boolean) {
     if (showLoading) {
@@ -301,6 +310,8 @@ export function PromotionEvaluationPanel() {
       setVotingState(nextVoting);
       setCohort(data?.cohort ?? null);
       setCanManageDeadline(Boolean(data?.permissions?.canManageDeadline));
+      setCanSaveFinalResult(Boolean(data?.finalization?.canSave));
+      setIsFinalized(Boolean(data?.finalization?.isFinalized));
       setDeadlineDraft(nextVoting.deadlineIso ? nextVoting.deadlineIso.slice(0, 16) : "");
 
       setScoreDraft((prev) => {
@@ -586,6 +597,49 @@ export function PromotionEvaluationPanel() {
     }
   }
 
+  async function saveFinalResult() {
+    if (!canSaveFinalResult) {
+      setMessage("Aun no se puede guardar el cierre final de la camada.");
+      setTimeout(() => setMessage(null), 2500);
+      return;
+    }
+
+    setSavingFinalization(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch("/api/discord/promotion-evaluations", {
+        method: "POST",
+      });
+
+      const data = await parseJsonSafe<{
+        ok?: boolean;
+        alreadyFinalized?: boolean;
+        promotedCount?: number;
+        error?: string;
+      }>(response);
+
+      if (!response.ok || (!data?.ok && !data?.alreadyFinalized)) {
+        throw new Error(data?.error || "No se pudo guardar el cierre final");
+      }
+
+      if (data?.alreadyFinalized) {
+        setMessage("El cierre final ya estaba guardado previamente.");
+      } else {
+        setMessage(`Cierre final guardado. ${data?.promotedCount ?? 0} miembro(s) promovido(s) a Trial Admin.`);
+      }
+
+      setTimeout(() => setMessage(null), 3200);
+      await loadData(false);
+    } catch (finalError) {
+      const finalMessage = finalError instanceof Error ? finalError.message : "Error desconocido";
+      setMessage(finalMessage);
+      setTimeout(() => setMessage(null), 3200);
+    } finally {
+      setSavingFinalization(false);
+    }
+  }
+
   return (
     <UICard className="relative overflow-hidden p-5 sm:p-6">
         
@@ -662,16 +716,31 @@ export function PromotionEvaluationPanel() {
                 <p className="mt-1 text-[11px] text-[var(--color-neutral-grey)]">
                   Miembros anexados al historial final: {cohortHistoryMembers.length}
                 </p>
+                {isFinalized ? (
+                  <p className="mt-1 text-[11px] text-[#34d399]">
+                    Cierre final guardado y promociones aplicadas en Discord.
+                  </p>
+                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={downloadFinalResult}
-                disabled={!canDownloadFinalResult}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[#ffac00]/40 bg-[#ffac00]/15 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#ffac00] transition hover:bg-[#ffac00]/25 disabled:opacity-50"
-              >
-                <FileDown className="h-3.5 w-3.5" />
-                Descargar resultado final
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={downloadFinalResult}
+                  disabled={!canDownloadFinalResult}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[#ffac00]/40 bg-[#ffac00]/15 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#ffac00] transition hover:bg-[#ffac00]/25 disabled:opacity-50"
+                >
+                  <FileDown className="h-3.5 w-3.5" />
+                  Descargar resultado final
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void saveFinalResult()}
+                  disabled={!canSaveFinalResult || savingFinalization || isFinalized || !canManageDeadline}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[#34d399]/40 bg-[#34d399]/15 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#34d399] transition hover:bg-[#34d399]/25 disabled:opacity-50"
+                >
+                  {savingFinalization ? "Guardando..." : "Guardar"}
+                </button>
+              </div>
             </div>
             {!votingState.isClosed ? (
               <p className="mt-2 text-[11px] text-[var(--color-neutral-grey)]">
