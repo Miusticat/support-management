@@ -309,15 +309,19 @@ export async function POST(request: NextRequest) {
     }
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const comentariosValue = comentarios ? `'${comentarios.replace(/'/g, "''")}'` : "NULL";
+    const evaluatorNameEscaped = evaluatorName.replace(/'/g, "''");
+    const postulacionIndexEscaped = postulacionIndex.replace(/'/g, "''");
+    const evaluatorDiscordIdEscaped = evaluatorDiscordId.replace(/'/g, "''");
 
     await prisma.$executeRawUnsafe(`
       INSERT INTO "PostulacionesEvaluation"
       ("id", "postulacionIndex", "evaluatorDiscordId", "evaluatorName", "score", "comentarios", "createdAt", "updatedAt")
-      VALUES (${id}, ${postulacionIndex}, ${evaluatorDiscordId}, ${evaluatorName}, ${score}, ${comentarios ?? null}, NOW(), NOW())
+      VALUES ('${id}', '${postulacionIndexEscaped}', '${evaluatorDiscordIdEscaped}', '${evaluatorNameEscaped}', ${score}, ${comentariosValue}, NOW(), NOW())
       ON CONFLICT ("postulacionIndex", "evaluatorDiscordId")
       DO UPDATE SET
         "score" = ${score},
-        "comentarios" = ${comentarios ?? null},
+        "comentarios" = ${comentariosValue},
         "updatedAt" = NOW()
     `);
 

@@ -94,12 +94,14 @@ export async function PUT(request: NextRequest) {
     }
 
     const userDiscordId = session.user?.discordUserId ?? "unknown";
+    const deadlineValue = deadline ? `'${deadline.toISOString()}'::TIMESTAMP` : "NULL";
+    const userIdEscaped = userDiscordId.replace(/'/g, "''");
 
     await prisma.$executeRawUnsafe(`
       UPDATE "PostulacionesSettings"
       SET
-        "votingDeadlineIso" = ${deadline ? deadline.toISOString() : null},
-        "createdByDiscordId" = ${userDiscordId},
+        "votingDeadlineIso" = ${deadlineValue},
+        "createdByDiscordId" = '${userIdEscaped}',
         "updatedAt" = NOW()
       WHERE "id" = 1
     `);
