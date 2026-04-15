@@ -58,14 +58,29 @@ function extractSheetSourceFromUrl(value: string) {
 
   try {
     const parsedUrl = new URL(input);
-    const pathMatch = parsedUrl.pathname.match(/\/spreadsheets\/d\/([^/]+)/i);
-    const sheetId = pathMatch?.[1]?.trim() ?? "";
+    const sheetPathMatch = parsedUrl.pathname.match(/\/spreadsheets\/d\/([^/]+)/i);
+    if (sheetPathMatch?.[1]) {
+      const sheetId = sheetPathMatch[1].trim();
+      const gidFromQuery = parsedUrl.searchParams.get("gid")?.trim() ?? "";
+      const gidFromHashMatch = parsedUrl.hash.match(/gid=(\d+)/i);
+      const gidFromHash = gidFromHashMatch?.[1]?.trim() ?? "";
 
-    const gidFromQuery = parsedUrl.searchParams.get("gid")?.trim() ?? "";
-    const gidFromHashMatch = parsedUrl.hash.match(/gid=(\d+)/i);
-    const gidFromHash = gidFromHashMatch?.[1]?.trim() ?? "";
+      return { sheetId, gid: gidFromQuery || gidFromHash || "" };
+    }
 
-    return { sheetId, gid: gidFromQuery || gidFromHash || "" };
+    const formPathMatch = parsedUrl.pathname.match(/\/forms\/d\/([^/]+)/i);
+    const formId = formPathMatch?.[1]?.trim() ?? "";
+
+    // Google Forms does not expose raw response rows publicly by form URL.
+    // For known forms, we map to their linked public responses sheet.
+    if (formId === "13UPIr5vyOlc0cupR515oo7weZfekzgX5JDsMr4alB28") {
+      return {
+        sheetId: "1VSKN3G7PtWbagnmI9RoOIKFXmZFAGGe6B8Dh-0E5Z9A",
+        gid: "6015011",
+      };
+    }
+
+    return null;
   } catch {
     return null;
   }
