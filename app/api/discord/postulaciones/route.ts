@@ -5,7 +5,7 @@ import { canAccessSanctionsByRole } from "@/lib/discord-staff-roles";
 import { prisma } from "@/lib/prisma";
 
 const DEFAULT_SHEET_ID = "1VSKN3G7PtWbagnmI9RoOIKFXmZFAGGe6B8Dh-0E5Z9A";
-const DEFAULT_SHEET_GID = "0";
+const DEFAULT_SHEET_GID = "6015011";
 
 type GoogleVizColumn = { label?: string };
 type GoogleVizCell = { v?: unknown; f?: string };
