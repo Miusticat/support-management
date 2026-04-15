@@ -531,9 +531,6 @@ export function PromotionEvaluationPanel() {
               Evaluación de Ascenso
             </h2>
             <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
-              Vista colaborativa exclusiva para Support Lead y Support Trainer. El nuevo flujo te guia paso a paso: seleccionas support, revisas contexto, evaluas con puntaje visual y registras evidencia en menos clics.
-            </p>
-            <p className="mt-1 text-xs text-[var(--color-neutral-grey)]">
               Evaluadores actuales: {evaluators.length > 0 ? evaluators.map((evaluator) => evaluator.displayName).join(", ") : "Sin evaluadores activos"}
             </p>
           </div>
