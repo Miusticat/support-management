@@ -394,6 +394,10 @@ export async function GET() {
         votingClosed,
         resultsReady: finalizedResults.length > 0,
         finalizedResults,
+        expectedEvaluators: [
+          { role: "Support Trainer", level: 2 },
+          { role: "Support Lead", level: 3 },
+        ],
         source: { sheetId, gid: sheetGid },
         fetchedAt: new Date().toISOString(),
       },

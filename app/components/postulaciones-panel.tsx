@@ -27,6 +27,7 @@ type PostulacionesResponse = {
   votingDeadline?: string | null;
   votingClosed?: boolean;
   resultsReady?: boolean;
+  expectedEvaluators?: Array<{ role: string; level: number }>;
   fetchedAt?: string;
   error?: string;
 };
@@ -112,6 +113,7 @@ export function PostulacionesPanel() {
   const [votingDeadline, setVotingDeadline] = useState<string | null>(null);
   const [votingClosed, setVotingClosed] = useState(false);
   const [resultsReady, setResultsReady] = useState(false);
+  const [expectedEvaluators, setExpectedEvaluators] = useState<Array<{ role: string; level: number }>>([]);
   const [expandedIndex, setExpandedIndex] = useState<string | null>(null);
   const [votingRowIndex, setVotingRowIndex] = useState<string | null>(null);
   const [votingScore, setVotingScore] = useState<number>(0);
@@ -144,6 +146,7 @@ export function PostulacionesPanel() {
       setVotingDeadline(data.votingDeadline ?? null);
       setVotingClosed(Boolean(data.votingClosed));
       setResultsReady(Boolean(data.resultsReady));
+      setExpectedEvaluators(Array.isArray(data.expectedEvaluators) ? data.expectedEvaluators : []);
       setLastSyncAt(data.fetchedAt ?? new Date().toISOString());
       setError(null);
     } catch (err) {
@@ -390,6 +393,58 @@ export function PostulacionesPanel() {
                               </div>
                             );
                           })}
+                        </div>
+                      </div>
+
+                      {/* Estado de evaluadores */}
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">
+                          Estado de evaluadores ({row.evaluations.length}/{expectedEvaluators.length})
+                        </p>
+                        <div className="space-y-2">
+                          {/* Evaluadores que votaron */}
+                          {row.evaluations.map((evaluation, idx) => (
+                            <div key={`voted-${idx}`} className="rounded-lg bg-white/[0.03] p-3 text-xs border-l-2 border-[#34d399]">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <p className="font-semibold text-[#34d399]">✓ {evaluation.evaluatorName}</p>
+                                  <div className="mt-1 flex items-center gap-1">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-2.5 w-2.5 ${
+                                          i < evaluation.score
+                                            ? "fill-[#34d399] text-[#34d399]"
+                                            : "text-[var(--color-neutral-grey)]/30"
+                                        }`}
+                                      />
+                                    ))}
+                                    <span className="ml-1 font-bold text-[#34d399]">{evaluation.score}/5</span>
+                                  </div>
+                                  {evaluation.comentarios && (
+                                    <p className="mt-1 text-[10px] text-[var(--color-neutral-grey)]">
+                                      Observación: "{evaluation.comentarios}"
+                                    </p>
+                                  )}
+                                  <p className="mt-1 text-[10px] text-[var(--color-neutral-grey)]/60">
+                                    {formatDateTime(evaluation.createdAt)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Evaluadores que no votaron */}
+                          {row.evaluations.length < expectedEvaluators.length && (
+                            <div className="rounded-lg bg-white/[0.03] p-3 text-xs border-l-2 border-[#fb7185]">
+                              <p className="font-semibold text-[#fb7185]">
+                                ✗ {expectedEvaluators.length - row.evaluations.length} evaluador(es) pendiente(s) de votar
+                              </p>
+                              <p className="mt-1 text-[10px] text-[var(--color-neutral-grey)]">
+                                El promedio se calculará solo con los votos registrados
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
