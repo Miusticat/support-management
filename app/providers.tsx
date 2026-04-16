@@ -9,7 +9,7 @@ type ProvidersProps = {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <SessionProvider refetchInterval={20} refetchOnWindowFocus>
+    <SessionProvider refetchInterval={300} refetchOnWindowFocus={false}>
       {children}
     </SessionProvider>
   );

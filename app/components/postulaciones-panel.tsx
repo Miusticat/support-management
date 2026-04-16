@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, RefreshCw, Star } from "lucide-react";
 import { UICard } from "@/app/components/ui-card";
 
@@ -32,7 +32,7 @@ type PostulacionesResponse = {
   error?: string;
 };
 
-const REFRESH_INTERVAL_MS = 15_000;
+const REFRESH_INTERVAL_MS = 30_000;
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -94,10 +94,24 @@ function useCountdown(deadline: string | null) {
       });
     };
 
+    if (document.hidden) {
+      return undefined;
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        updateCountdown();
+      }
+    };
+
     updateCountdown();
     const intervalId = window.setInterval(updateCountdown, 1000);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [deadline]);
 
   return timeLeft;
@@ -122,7 +136,7 @@ export function PostulacionesPanel() {
 
   const countdown = useCountdown(votingDeadline);
 
-  async function loadPostulaciones(showRefreshingState: boolean) {
+  const loadPostulaciones = useCallback(async (showRefreshingState: boolean) => {
     if (showRefreshingState) {
       setRefreshing(true);
     } else {
@@ -155,9 +169,9 @@ export function PostulacionesPanel() {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, []);
 
-  async function submitVote() {
+  const submitVote = useCallback(async () => {
     if (!votingRowIndex || votingScore === 0) {
       return;
     }
@@ -192,7 +206,7 @@ export function PostulacionesPanel() {
       setError(err instanceof Error ? err.message : "Error desconocido");
       setVotingLoading(false);
     }
-  }
+  }, [votingRowIndex, votingScore, votingComentarios, loadPostulaciones]);
 
   useEffect(() => {
     loadPostulaciones(false);
@@ -219,6 +233,26 @@ export function PostulacionesPanel() {
   }, [headers, rows]);
 
   const votingActive = Boolean(!votingClosed && !countdown?.isExpired && votingDeadline);
+
+  const handleToggleExpand = useCallback((rowIndex: string, isExpanded: boolean) => {
+    setExpandedIndex(isExpanded ? null : rowIndex);
+  }, []);
+
+  const handleStartVote = useCallback((rowIndex: string, currentScore: number, currentComentarios: string | null) => {
+    setVotingRowIndex(rowIndex);
+    setVotingScore(currentScore);
+    setVotingComentarios(currentComentarios || "");
+  }, []);
+
+  const handleCancelVote = useCallback(() => {
+    setVotingRowIndex(null);
+    setVotingScore(0);
+    setVotingComentarios("");
+  }, []);
+
+  const handleSetVotingScore = useCallback((score: number) => {
+    setVotingScore(score);
+  }, []);
 
   if (loading) {
     return (
@@ -328,7 +362,7 @@ export function PostulacionesPanel() {
               >
                 <button
                   type="button"
-                  onClick={() => setExpandedIndex(isExpanded ? null : row.rowIndex)}
+                  onClick={() => handleToggleExpand(row.rowIndex, isExpanded)}
                   className="w-full text-left"
                 >
                   <div className="flex items-center justify-between gap-4">
@@ -507,9 +541,7 @@ export function PostulacionesPanel() {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setVotingRowIndex(row.rowIndex);
-                            setVotingScore(row.currentUserVote?.score || 0);
-                            setVotingComentarios(row.currentUserVote?.comentarios || "");
+                            handleStartVote(row.rowIndex, row.currentUserVote?.score || 0, row.currentUserVote?.comentarios || null);
                           }}
                           className="w-full rounded-lg border border-[#34d399]/40 bg-[#34d399]/12 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/20"
                         >
@@ -532,7 +564,7 @@ export function PostulacionesPanel() {
                                 <button
                                   key={score}
                                   type="button"
-                                  onClick={() => setVotingScore(score)}
+                                  onClick={() => handleSetVotingScore(score)}
                                   className={`rounded-lg px-3 py-2 font-bold transition-all ${
                                     votingScore === score
                                       ? "bg-[#ffac00]/40 text-[#ffac00]"
@@ -565,11 +597,7 @@ export function PostulacionesPanel() {
                           <div className="flex gap-2">
                             <button
                               type="button"
-                              onClick={() => {
-                                setVotingRowIndex(null);
-                                setVotingScore(0);
-                                setVotingComentarios("");
-                              }}
+                              onClick={handleCancelVote}
                               className="flex-1 rounded-lg border border-[var(--color-neutral-grey)]/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)] transition-colors hover:bg-white/[0.05]"
                             >
                               Cancelar
