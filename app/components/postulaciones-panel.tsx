@@ -27,7 +27,7 @@ type PostulacionesResponse = {
   votingDeadline?: string | null;
   votingClosed?: boolean;
   resultsReady?: boolean;
-  expectedEvaluators?: Array<{ role: string; level: number }>;
+  expectedEvaluators?: Array<{ discordId: string; name: string; roles: string[] }>;
   fetchedAt?: string;
   error?: string;
 };
@@ -113,7 +113,7 @@ export function PostulacionesPanel() {
   const [votingDeadline, setVotingDeadline] = useState<string | null>(null);
   const [votingClosed, setVotingClosed] = useState(false);
   const [resultsReady, setResultsReady] = useState(false);
-  const [expectedEvaluators, setExpectedEvaluators] = useState<Array<{ role: string; level: number }>>([]);
+  const [expectedEvaluators, setExpectedEvaluators] = useState<Array<{ discordId: string; name: string; roles: string[] }>>([]);
   const [expandedIndex, setExpandedIndex] = useState<string | null>(null);
   const [votingRowIndex, setVotingRowIndex] = useState<string | null>(null);
   const [votingScore, setVotingScore] = useState<number>(0);
@@ -436,14 +436,28 @@ export function PostulacionesPanel() {
 
                           {/* Evaluadores que no votaron */}
                           {row.evaluations.length < expectedEvaluators.length && (
-                            <div className="rounded-lg bg-white/[0.03] p-3 text-xs border-l-2 border-[#fb7185]">
-                              <p className="font-semibold text-[#fb7185]">
-                                ✗ {expectedEvaluators.length - row.evaluations.length} evaluador(es) pendiente(s) de votar
-                              </p>
-                              <p className="mt-1 text-[10px] text-[var(--color-neutral-grey)]">
-                                El promedio se calculará solo con los votos registrados
-                              </p>
-                            </div>
+                            (() => {
+                              const votedIds = new Set(row.evaluations.map((e) => e.evaluatorDiscordId));
+                              const pending = expectedEvaluators.filter((e) => !votedIds.has(e.discordId));
+
+                              return (
+                                <div className="rounded-lg bg-white/[0.03] p-3 text-xs border-l-2 border-[#fb7185]">
+                                  <p className="font-semibold text-[#fb7185]">
+                                    ✗ Pendiente de votación ({pending.length})
+                                  </p>
+                                  <div className="mt-2 space-y-1">
+                                    {pending.map((evaluator) => (
+                                      <p key={evaluator.discordId} className="text-[10px] text-[var(--color-neutral-grey)]">
+                                        • {evaluator.name}
+                                      </p>
+                                    ))}
+                                  </div>
+                                  <p className="mt-2 text-[10px] text-[var(--color-neutral-grey)]">
+                                    El promedio se calculará solo con los votos registrados
+                                  </p>
+                                </div>
+                              );
+                            })()
                           )}
                         </div>
                       </div>

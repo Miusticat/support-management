@@ -7,6 +7,13 @@ import { prisma } from "@/lib/prisma";
 const DEFAULT_SHEET_ID = "1VSKN3G7PtWbagnmI9RoOIKFXmZFAGGe6B8Dh-0E5Z9A";
 const DEFAULT_SHEET_GID = "6015011";
 const PASSING_SCORE = 3;
+const ROLE_TRAINER_ID = "1486041733405081712";
+const ROLE_LEAD_ID = "1486041732238803096";
+
+type DiscordMember = {
+  user: { id: string; username: string };
+  roles: string[];
+};
 
 type GoogleVizColumn = { label?: string };
 type GoogleVizCell = { v?: unknown; f?: string };
@@ -61,6 +68,48 @@ function decideResult(averageScore: number | null, votesCount: number) {
     status: "No aprobado",
     decisionReason: `Promedio final ${averageScore.toFixed(2)} con ${votesCount} voto(s)`,
   };
+}
+
+async function fetchEvaluatorsFromDiscord() {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+
+  if (!guildId || !botToken) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members?limit=1000`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bot ${botToken}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const members = (await response.json()) as DiscordMember[];
+    const evaluators = members
+      .filter((member) => member.roles.includes(ROLE_TRAINER_ID) || member.roles.includes(ROLE_LEAD_ID))
+      .map((member) => ({
+        discordId: member.user.id,
+        name: member.user.username,
+        roles: [
+          member.roles.includes(ROLE_TRAINER_ID) ? "Support Trainer" : null,
+          member.roles.includes(ROLE_LEAD_ID) ? "Support Lead" : null,
+        ].filter(Boolean) as string[],
+      }));
+
+    return evaluators;
+  } catch {
+    return [];
+  }
 }
 
 function parseGoogleVizPayload(raw: string): GoogleVizResponse {
@@ -364,6 +413,7 @@ export async function GET() {
 
     const finalizedResults = votingClosed ? await loadStoredResults() : [];
     const currentUserDiscordId = session.user.discordUserId ?? null;
+    const evaluators = await fetchEvaluatorsFromDiscord();
 
     const rowsWithEvaluations = await Promise.all(
       normalizedRows.map(async (row, index) => {
@@ -394,10 +444,7 @@ export async function GET() {
         votingClosed,
         resultsReady: finalizedResults.length > 0,
         finalizedResults,
-        expectedEvaluators: [
-          { role: "Support Trainer", level: 2 },
-          { role: "Support Lead", level: 3 },
-        ],
+        expectedEvaluators: evaluators,
         source: { sheetId, gid: sheetGid },
         fetchedAt: new Date().toISOString(),
       },
