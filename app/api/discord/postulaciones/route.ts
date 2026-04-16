@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 const DEFAULT_SHEET_ID = "1VSKN3G7PtWbagnmI9RoOIKFXmZFAGGe6B8Dh-0E5Z9A";
 const DEFAULT_SHEET_GID = "6015011";
+const PASSING_SCORE = 3;
 
 type GoogleVizColumn = { label?: string };
 type GoogleVizCell = { v?: unknown; f?: string };
@@ -26,6 +27,41 @@ type EvaluateRequestBody = {
   score?: number;
   comentarios?: string;
 };
+
+type FinalResultRow = {
+  postulacionIndex: string;
+  candidateName: string;
+  submittedAt: string;
+  averageScore: number | null;
+  votesCount: number;
+  status: string;
+  finalizedAt: Date;
+};
+
+function escapeSqlLiteral(value: string) {
+  return value.replace(/'/g, "''");
+}
+
+function decideResult(averageScore: number | null, votesCount: number) {
+  if (averageScore === null || votesCount === 0) {
+    return {
+      status: "No aprobado",
+      decisionReason: "Sin votos registrados",
+    };
+  }
+
+  if (averageScore >= PASSING_SCORE) {
+    return {
+      status: "Aprobado",
+      decisionReason: `Promedio final ${averageScore.toFixed(2)} con ${votesCount} voto(s)`,
+    };
+  }
+
+  return {
+    status: "No aprobado",
+    decisionReason: `Promedio final ${averageScore.toFixed(2)} con ${votesCount} voto(s)`,
+  };
+}
 
 function parseGoogleVizPayload(raw: string): GoogleVizResponse {
   const firstParen = raw.indexOf("(");
@@ -133,6 +169,22 @@ async function ensurePostulacionesTablesExist() {
     CREATE INDEX IF NOT EXISTS "PostulacionesEvaluation_postulacionIndex_idx"
     ON "PostulacionesEvaluation"("postulacionIndex")
   `);
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "PostulacionesResult" (
+      "id" TEXT PRIMARY KEY,
+      "postulacionIndex" TEXT NOT NULL UNIQUE,
+      "candidateName" TEXT NOT NULL,
+      "submittedAt" TEXT,
+      "averageScore" DOUBLE PRECISION,
+      "votesCount" INTEGER NOT NULL DEFAULT 0,
+      "status" TEXT NOT NULL,
+      "decisionReason" TEXT,
+      "headersJson" TEXT,
+      "rowDataJson" TEXT,
+      "finalizedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 async function loadEvaluations(postulacionIndex: string) {
@@ -159,6 +211,90 @@ async function loadVotingDeadline() {
     return result[0]?.votingDeadlineIso ?? null;
   } catch {
     return null;
+  }
+}
+
+async function countStoredResults() {
+  try {
+    const result = await prisma.$queryRaw<Array<{ total: bigint }>>`
+      SELECT COUNT(*)::bigint AS total
+      FROM "PostulacionesResult"
+    `;
+
+    return Number(result[0]?.total ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
+async function loadStoredResults() {
+  try {
+    return await prisma.$queryRaw<FinalResultRow[]>`
+      SELECT
+        "postulacionIndex",
+        "candidateName",
+        "submittedAt",
+        "averageScore",
+        "votesCount",
+        "status",
+        "finalizedAt"
+      FROM "PostulacionesResult"
+      ORDER BY
+        CASE WHEN "averageScore" IS NULL THEN 999 ELSE 0 END,
+        "averageScore" DESC,
+        "candidateName" ASC
+    `;
+  } catch {
+    return [];
+  }
+}
+
+async function finalizeResultsIfNeeded(headers: string[], normalizedRows: string[][]) {
+  const storedCount = await countStoredResults();
+  const expectedCount = normalizedRows.length;
+
+  if (storedCount === expectedCount && expectedCount > 0) {
+    return;
+  }
+
+  await prisma.$executeRawUnsafe(`DELETE FROM "PostulacionesResult"`);
+
+  for (let index = 0; index < normalizedRows.length; index += 1) {
+    const rowData = normalizedRows[index] ?? [];
+    const evaluations = await loadEvaluations(String(index));
+    const scores = evaluations.map((evaluation) => evaluation.score);
+    const votesCount = scores.length;
+    const averageScore = votesCount > 0 ? Number((scores.reduce((a, b) => a + b, 0) / votesCount).toFixed(2)) : null;
+    const decision = decideResult(averageScore, votesCount);
+    const candidateName = rowData[1]?.trim() || rowData[0] || `Postulación ${index + 1}`;
+    const submittedAt = rowData[0] ?? "";
+    const resultId = `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`;
+
+    const rowDataEscaped = escapeSqlLiteral(JSON.stringify(rowData));
+    const headersEscaped = escapeSqlLiteral(JSON.stringify(headers));
+    const candidateNameEscaped = escapeSqlLiteral(candidateName);
+    const submittedAtEscaped = escapeSqlLiteral(submittedAt);
+    const decisionReasonEscaped = escapeSqlLiteral(decision.decisionReason);
+    const statusEscaped = escapeSqlLiteral(decision.status);
+    const resultIdEscaped = escapeSqlLiteral(resultId);
+
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "PostulacionesResult"
+      ("id", "postulacionIndex", "candidateName", "submittedAt", "averageScore", "votesCount", "status", "decisionReason", "headersJson", "rowDataJson", "finalizedAt")
+      VALUES (
+        '${resultIdEscaped}',
+        '${index}',
+        '${candidateNameEscaped}',
+        '${submittedAtEscaped}',
+        ${averageScore === null ? "NULL" : averageScore},
+        ${votesCount},
+        '${statusEscaped}',
+        '${decisionReasonEscaped}',
+        '${headersEscaped}',
+        '${rowDataEscaped}',
+        NOW()
+      )
+    `);
   }
 }
 
@@ -220,6 +356,13 @@ export async function GET() {
       .filter(isRowMeaningful);
 
     const votingDeadline = await loadVotingDeadline();
+    const votingClosed = Boolean(votingDeadline && new Date() >= votingDeadline);
+
+    if (votingClosed) {
+      await finalizeResultsIfNeeded(headers, normalizedRows);
+    }
+
+    const finalizedResults = votingClosed ? await loadStoredResults() : [];
     const currentUserDiscordId = session.user.discordUserId ?? null;
 
     const rowsWithEvaluations = await Promise.all(
@@ -248,6 +391,9 @@ export async function GET() {
         headers,
         rows: rowsWithEvaluations,
         votingDeadline,
+        votingClosed,
+        resultsReady: finalizedResults.length > 0,
+        finalizedResults,
         source: { sheetId, gid: sheetGid },
         fetchedAt: new Date().toISOString(),
       },
@@ -291,7 +437,7 @@ export async function POST(request: NextRequest) {
     }
 
     const votingDeadline = await loadVotingDeadline();
-    if (votingDeadline && new Date() > votingDeadline) {
+    if (votingDeadline && new Date() >= votingDeadline) {
       return NextResponse.json(
         { error: "El período de votación ha cerrado" },
         { status: 403 }

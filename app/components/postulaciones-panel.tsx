@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Star } from "lucide-react";
+import { Download, RefreshCw, Star } from "lucide-react";
 import { UICard } from "@/app/components/ui-card";
 
 type Evaluation = {
@@ -25,6 +25,8 @@ type PostulacionesResponse = {
   headers?: string[];
   rows?: PostulacionRow[];
   votingDeadline?: string | null;
+  votingClosed?: boolean;
+  resultsReady?: boolean;
   fetchedAt?: string;
   error?: string;
 };
@@ -108,6 +110,8 @@ export function PostulacionesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [votingDeadline, setVotingDeadline] = useState<string | null>(null);
+  const [votingClosed, setVotingClosed] = useState(false);
+  const [resultsReady, setResultsReady] = useState(false);
   const [expandedIndex, setExpandedIndex] = useState<string | null>(null);
   const [votingRowIndex, setVotingRowIndex] = useState<string | null>(null);
   const [votingScore, setVotingScore] = useState<number>(0);
@@ -138,6 +142,8 @@ export function PostulacionesPanel() {
       setHeaders(Array.isArray(data.headers) ? data.headers : []);
       setRows(Array.isArray(data.rows) ? data.rows : []);
       setVotingDeadline(data.votingDeadline ?? null);
+      setVotingClosed(Boolean(data.votingClosed));
+      setResultsReady(Boolean(data.resultsReady));
       setLastSyncAt(data.fetchedAt ?? new Date().toISOString());
       setError(null);
     } catch (err) {
@@ -209,7 +215,7 @@ export function PostulacionesPanel() {
     return [];
   }, [headers, rows]);
 
-  const votingActive = !countdown?.isExpired && votingDeadline;
+  const votingActive = Boolean(!votingClosed && !countdown?.isExpired && votingDeadline);
 
   if (loading) {
     return (
@@ -255,12 +261,12 @@ export function PostulacionesPanel() {
           {votingDeadline && (
             <div className="text-right">
               <p className="text-xs uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/80">
-                {countdown?.isExpired ? "Votación cerrada" : "Tiempo hasta cierre"}
+                {votingClosed || countdown?.isExpired ? "Votación cerrada" : "Tiempo hasta cierre"}
               </p>
               {countdown && (
                 <p
                   className={`mt-1 text-sm font-mono font-bold ${
-                    countdown.isExpired
+                    votingClosed || countdown.isExpired
                       ? "text-[#fb7185]"
                       : countdown.days === 0 && countdown.hours === 0
                         ? "text-[#facc15]"
@@ -273,15 +279,30 @@ export function PostulacionesPanel() {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => loadPostulaciones(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-white)] transition-colors hover:bg-white/[0.08]"
-            disabled={refreshing}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            {refreshing ? "Actualizando" : "Actualizar"}
-          </button>
+          {votingClosed && resultsReady && (
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "/api/discord/postulaciones-results";
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border border-[#34d399]/40 bg-[#34d399]/12 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/20"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Descargar resultados
+            </button>
+          )}
+
+          {!votingClosed && (
+            <button
+              type="button"
+              onClick={() => loadPostulaciones(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-white)] transition-colors hover:bg-white/[0.08]"
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Actualizando" : "Actualizar"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -347,6 +368,12 @@ export function PostulacionesPanel() {
                       <div>
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-neutral-grey)]/60">
                           Respuestas del formulario
+                    {votingClosed && !resultsReady && (
+                      <div className="mt-3 rounded-lg border border-[#facc15]/35 bg-[#facc15]/12 px-3 py-2 text-xs text-[#ffe7a3]">
+                        Cerrando votación y consolidando resultados...
+                      </div>
+                    )}
+
                         </p>
                         <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg bg-white/[0.02] p-3">
                           {tableHeaders.map((header, idx) => {
