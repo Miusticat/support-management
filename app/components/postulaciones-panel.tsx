@@ -658,6 +658,12 @@ export function PostulacionesPanel() {
                 <button
                   type="button"
                   onClick={() => handleToggleExpand(row.rowIndex, isExpanded)}
+                  onKeyDown={(event) => {
+                    if (event.key === " ") {
+                      event.preventDefault();
+                    }
+                  }}
+                  aria-expanded={isExpanded}
                   className="w-full text-left"
                 >
                   <div className="flex items-center justify-between gap-4">
@@ -705,235 +711,231 @@ export function PostulacionesPanel() {
                       </div>
                     )}
                   </div>
+                </button>
 
-                  {isExpanded && (
-                    <div className="mt-4 border-t border-white/8 pt-4 space-y-4">
-                      {votingClosed && !resultsReady && (
-                        <div className="rounded-lg border border-[#facc15]/35 bg-[#facc15]/12 px-3 py-2 text-xs text-[#ffe7a3]">
-                          Cerrando votacion y consolidando resultados...
-                        </div>
-                      )}
-
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)/60">
-                          Respuestas del formulario
-                        </p>
-                        <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg bg-white/2 p-3">
-                          {tableHeaders.map((header, idx) => {
-                            const value = row.rowData[idx] ?? "";
-
-                            return (
-                              <div key={`${row.rowIndex}-field-${idx}`} className="rounded-md bg-white/3 p-2">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-(--color-neutral-grey)/70">
-                                  {header}
-                                </p>
-                                <p className="mt-1 whitespace-pre-wrap wrap-break-word text-xs text-(--color-neutral-white)">
-                                  {value.trim().length > 0 ? value : "-"}
-                                </p>
-                              </div>
-                            );
-                          })}
-                        </div>
+                {isExpanded && (
+                  <div className="mt-4 border-t border-white/8 pt-4 space-y-4">
+                    {votingClosed && !resultsReady && (
+                      <div className="rounded-lg border border-[#facc15]/35 bg-[#facc15]/12 px-3 py-2 text-xs text-[#ffe7a3]">
+                        Cerrando votacion y consolidando resultados...
                       </div>
+                    )}
 
-                      {/* Estado de evaluadores */}
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)/60">
-                          Estado de evaluadores ({row.evaluations.length}/{expectedEvaluators.length})
-                        </p>
-                        <div className="space-y-2">
-                          {/* Evaluadores que votaron */}
-                          {row.evaluations.map((evaluation, idx) => (
-                            <div key={`voted-${idx}`} className="rounded-lg bg-white/3 p-3 text-xs border-l-2 border-[#34d399]">
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <p className="font-semibold text-[#34d399]">✓ {evaluation.evaluatorName}</p>
-                                  <div className="mt-1 flex items-center gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-2.5 w-2.5 ${
-                                          i < evaluation.score
-                                            ? "fill-[#34d399] text-[#34d399]"
-                                            : "text-(--color-neutral-grey)/30"
-                                        }`}
-                                      />
-                                    ))}
-                                    <span className="ml-1 font-bold text-[#34d399]">{evaluation.score}/5</span>
-                                  </div>
-                                  {evaluation.comentarios && (
-                                    <p className="mt-1 text-[10px] text-(--color-neutral-grey)">
-                                      Observación: "{evaluation.comentarios}"
-                                    </p>
-                                  )}
-                                  <p className="mt-1 text-[10px] text-(--color-neutral-grey)/60">
-                                    {formatDateTime(evaluation.createdAt)}
-                                  </p>
-                                </div>
-                              </div>
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)/60">
+                        Respuestas del formulario
+                      </p>
+                      <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg bg-white/2 p-3">
+                        {tableHeaders.map((header, idx) => {
+                          const value = row.rowData[idx] ?? "";
+
+                          return (
+                            <div key={`${row.rowIndex}-field-${idx}`} className="rounded-md bg-white/3 p-2">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-(--color-neutral-grey)/70">
+                                {header}
+                              </p>
+                              <p className="mt-1 whitespace-pre-wrap wrap-break-word text-xs text-(--color-neutral-white)">
+                                {value.trim().length > 0 ? value : "-"}
+                              </p>
                             </div>
-                          ))}
-
-                          {/* Evaluadores que no votaron */}
-                          {row.evaluations.length < expectedEvaluators.length && (
-                            (() => {
-                              const votedIds = new Set(row.evaluations.map((e) => e.evaluatorDiscordId));
-                              const pending = expectedEvaluators.filter((e) => !votedIds.has(e.discordId));
-
-                              return (
-                                <div className="rounded-lg bg-white/3 p-3 text-xs border-l-2 border-[#fb7185]">
-                                  <p className="font-semibold text-[#fb7185]">
-                                    ✗ Pendiente de votación ({pending.length})
-                                  </p>
-                                  <div className="mt-2 space-y-1">
-                                    {pending.map((evaluator) => (
-                                      <p key={evaluator.discordId} className="text-[10px] text-(--color-neutral-grey)">
-                                        • {evaluator.name}
-                                      </p>
-                                    ))}
-                                  </div>
-                                  <p className="mt-2 text-[10px] text-(--color-neutral-grey)">
-                                    El promedio se calcula automaticamente con los votos registrados
-                                  </p>
-                                </div>
-                              );
-                            })()
-                          )}
-                        </div>
+                          );
+                        })}
                       </div>
+                    </div>
 
-                      {/* Evaluaciones existentes */}
-                      {row.evaluations.length > 0 && (
-                        <div>
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)/60">
-                            Evaluaciones ({row.evaluations.length})
-                          </p>
-                          <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {row.evaluations.map((evaluation, idx) => (
-                              <div key={idx} className="rounded-lg bg-white/3 p-3 text-xs">
-                                <div className="flex items-center justify-between">
-                                  <p className="font-medium text-(--color-neutral-white)">
-                                    {evaluation.evaluatorName}
-                                  </p>
-                                  <div className="flex items-center gap-1">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-3 w-3 ${
-                                          i < evaluation.score
-                                            ? "fill-[#ffac00] text-[#ffac00]"
-                                            : "text-(--color-neutral-grey)/30"
-                                        }`}
-                                      />
-                                    ))}
-                                    <span className="ml-2 font-bold text-[#ffac00]">{evaluation.score}</span>
-                                  </div>
+                    {/* Estado de evaluadores */}
+                    <div>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)/60">
+                        Estado de evaluadores ({row.evaluations.length}/{expectedEvaluators.length})
+                      </p>
+                      <div className="space-y-2">
+                        {/* Evaluadores que votaron */}
+                        {row.evaluations.map((evaluation, idx) => (
+                          <div key={`voted-${idx}`} className="rounded-lg bg-white/3 p-3 text-xs border-l-2 border-[#34d399]">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="font-semibold text-[#34d399]">✓ {evaluation.evaluatorName}</p>
+                                <div className="mt-1 flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-2.5 w-2.5 ${
+                                        i < evaluation.score
+                                          ? "fill-[#34d399] text-[#34d399]"
+                                          : "text-(--color-neutral-grey)/30"
+                                      }`}
+                                    />
+                                  ))}
+                                  <span className="ml-1 font-bold text-[#34d399]">{evaluation.score}/5</span>
                                 </div>
                                 {evaluation.comentarios && (
-                                  <p className="mt-1 text-(--color-neutral-grey)">{evaluation.comentarios}</p>
+                                  <p className="mt-1 text-[10px] text-(--color-neutral-grey)">
+                                    Observación: "{evaluation.comentarios}"
+                                  </p>
                                 )}
                                 <p className="mt-1 text-[10px] text-(--color-neutral-grey)/60">
                                   {formatDateTime(evaluation.createdAt)}
                                 </p>
                               </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Evaluadores que no votaron */}
+                        {row.evaluations.length < expectedEvaluators.length && (
+                          (() => {
+                            const votedIds = new Set(row.evaluations.map((e) => e.evaluatorDiscordId));
+                            const pending = expectedEvaluators.filter((e) => !votedIds.has(e.discordId));
+
+                            return (
+                              <div className="rounded-lg bg-white/3 p-3 text-xs border-l-2 border-[#fb7185]">
+                                <p className="font-semibold text-[#fb7185]">
+                                  ✗ Pendiente de votación ({pending.length})
+                                </p>
+                                <div className="mt-2 space-y-1">
+                                  {pending.map((evaluator) => (
+                                    <p key={evaluator.discordId} className="text-[10px] text-(--color-neutral-grey)">
+                                      • {evaluator.name}
+                                    </p>
+                                  ))}
+                                </div>
+                                <p className="mt-2 text-[10px] text-(--color-neutral-grey)">
+                                  El promedio se calcula automaticamente con los votos registrados
+                                </p>
+                              </div>
+                            );
+                          })()
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Evaluaciones existentes */}
+                    {row.evaluations.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)/60">
+                          Evaluaciones ({row.evaluations.length})
+                        </p>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {row.evaluations.map((evaluation, idx) => (
+                            <div key={idx} className="rounded-lg bg-white/3 p-3 text-xs">
+                              <div className="flex items-center justify-between">
+                                <p className="font-medium text-(--color-neutral-white)">
+                                  {evaluation.evaluatorName}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-3 w-3 ${
+                                        i < evaluation.score
+                                          ? "fill-[#ffac00] text-[#ffac00]"
+                                          : "text-(--color-neutral-grey)/30"
+                                      }`}
+                                    />
+                                  ))}
+                                  <span className="ml-2 font-bold text-[#ffac00]">{evaluation.score}</span>
+                                </div>
+                              </div>
+                              {evaluation.comentarios && (
+                                <p className="mt-1 text-(--color-neutral-grey)">{evaluation.comentarios}</p>
+                              )}
+                              <p className="mt-1 text-[10px] text-(--color-neutral-grey)/60">
+                                {formatDateTime(evaluation.createdAt)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Form de votación */}
+                    {votingActive && (
+                      <div className="rounded-lg border border-white/10 bg-white/2 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-(--color-neutral-grey)/70">
+                          Promedio en vivo
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#ffac00]">
+                          {liveAverage !== null ? liveAverage.toFixed(2) : "Sin votos"}
+                          {isVoting && votingScore > 0 ? " (incluye mi seleccion actual)" : ""}
+                        </p>
+                      </div>
+                    )}
+
+                    {votingActive && !isVoting && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleStartVote(row.rowIndex, row.currentUserVote?.score || 0, row.currentUserVote?.comentarios || null);
+                        }}
+                        className="w-full rounded-lg border border-[#34d399]/40 bg-[#34d399]/12 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/20"
+                      >
+                        {row.currentUserVote ? "Editar mi voto" : "Votar"}
+                      </button>
+                    )}
+
+                    {/* Voting UI */}
+                    {isVoting && (
+                      <div className="mt-4 space-y-3 rounded-lg bg-white/3 p-4">
+                        <div>
+                          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)">
+                            Mi calificacion
+                          </p>
+                          <div className="flex gap-3">
+                            {[1, 2, 3, 4, 5].map((score) => (
+                              <button
+                                key={score}
+                                type="button"
+                                onClick={() => handleSetVotingScore(score)}
+                                className={`rounded-lg px-3 py-2 font-bold transition-all ${
+                                  votingScore === score
+                                    ? "bg-[#ffac00]/40 text-[#ffac00]"
+                                    : "bg-white/5 text-(--color-neutral-grey) hover:bg-white/10"
+                                }`}
+                              >
+                                <Star
+                                  className={`inline h-4 w-4 ${
+                                    votingScore >= score ? "fill-current" : ""
+                                  }`}
+                                />
+                              </button>
                             ))}
                           </div>
                         </div>
-                      )}
 
-                      {/* Form de votación */}
-                      {votingActive && (
-                        <div className="rounded-lg border border-white/10 bg-white/2 px-3 py-2">
-                          <p className="text-[10px] uppercase tracking-[0.16em] text-(--color-neutral-grey)/70">
-                            Promedio en vivo
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-[#ffac00]">
-                            {liveAverage !== null ? liveAverage.toFixed(2) : "Sin votos"}
-                            {isVoting && votingScore > 0 ? " (incluye mi seleccion actual)" : ""}
-                          </p>
+                        <div>
+                          <label className="text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)">
+                            Comentarios (opcional)
+                          </label>
+                          <textarea
+                            value={votingComentarios}
+                            onChange={(e) => setVotingComentarios(e.target.value)}
+                            className="mt-2 w-full rounded-lg bg-white/5 p-2 text-xs text-(--color-neutral-white) placeholder-(--color-neutral-grey)/50 focus:outline-none focus:ring-1 focus:ring-[#ffac00]"
+                            placeholder="Agrega comentarios opcionales..."
+                            rows={3}
+                          />
                         </div>
-                      )}
 
-                      {votingActive && !isVoting && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStartVote(row.rowIndex, row.currentUserVote?.score || 0, row.currentUserVote?.comentarios || null);
-                          }}
-                          className="w-full rounded-lg border border-[#34d399]/40 bg-[#34d399]/12 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/20"
-                        >
-                          {row.currentUserVote ? "Editar mi voto" : "Votar"}
-                        </button>
-                      )}
-
-                      {/* Voting UI */}
-                      {isVoting && (
-                        <div
-                          className="mt-4 space-y-3 rounded-lg bg-white/3 p-4"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div>
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)">
-                              Mi calificacion
-                            </p>
-                            <div className="flex gap-3">
-                              {[1, 2, 3, 4, 5].map((score) => (
-                                <button
-                                  key={score}
-                                  type="button"
-                                  onClick={() => handleSetVotingScore(score)}
-                                  className={`rounded-lg px-3 py-2 font-bold transition-all ${
-                                    votingScore === score
-                                      ? "bg-[#ffac00]/40 text-[#ffac00]"
-                                      : "bg-white/5 text-(--color-neutral-grey) hover:bg-white/10"
-                                  }`}
-                                >
-                                  <Star
-                                    className={`inline h-4 w-4 ${
-                                      votingScore >= score ? "fill-current" : ""
-                                    }`}
-                                  />
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey)">
-                              Comentarios (opcional)
-                            </label>
-                            <textarea
-                              value={votingComentarios}
-                              onChange={(e) => setVotingComentarios(e.target.value)}
-                              className="mt-2 w-full rounded-lg bg-white/5 p-2 text-xs text-(--color-neutral-white) placeholder-(--color-neutral-grey)/50 focus:outline-none focus:ring-1 focus:ring-[#ffac00]"
-                              placeholder="Agrega comentarios opcionales..."
-                              rows={3}
-                            />
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={handleCancelVote}
-                              className="flex-1 rounded-lg border border-(--color-neutral-grey)/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey) transition-colors hover:bg-white/5"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={submitVote}
-                              disabled={votingScore === 0 || votingLoading}
-                              className="flex-1 rounded-lg bg-[#34d399]/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/60 disabled:opacity-50"
-                            >
-                              {votingLoading ? "Guardando..." : "Guardar voto"}
-                            </button>
-                          </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCancelVote}
+                            className="flex-1 rounded-lg border border-(--color-neutral-grey)/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--color-neutral-grey) transition-colors hover:bg-white/5"
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={submitVote}
+                            disabled={votingScore === 0 || votingLoading}
+                            className="flex-1 rounded-lg bg-[#34d399]/40 px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#34d399] transition-colors hover:bg-[#34d399]/60 disabled:opacity-50"
+                          >
+                            {votingLoading ? "Guardando..." : "Guardar voto"}
+                          </button>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </UICard>
             );
           })}
