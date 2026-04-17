@@ -114,8 +114,14 @@ export async function GET() {
   const headers: Record<string, string> = {
     "User-Agent": userAgent,
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
     "Cache-Control": "no-store",
     Pragma: "no-cache",
+    Referer: SOURCE_URL,
+    Origin: "https://pcu-es.gta.world",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
   };
 
   if (cookieFromEnv) {
@@ -146,14 +152,17 @@ export async function GET() {
     }
 
     if (detectAntiBot(html)) {
+      const note = cookieFromEnv
+        ? "La fuente sigue bloqueando la sesion. La cookie puede estar expirada o invalidada para el entorno actual."
+        : "La fuente requiere JavaScript/sesion para entregar datos. Configura PCU_TESTER_MANAGER_COOKIE para habilitar lectura automatica.";
+
       return NextResponse.json(
         {
           available: false,
           sourceUrl: SOURCE_URL,
           fetchedAt: new Date().toISOString(),
           metrics: [] as ParsedMetric[],
-          note:
-            "La fuente requiere JavaScript/sesion para entregar datos. Configura PCU_TESTER_MANAGER_COOKIE para habilitar lectura automatica.",
+          note,
         },
         { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } }
       );
