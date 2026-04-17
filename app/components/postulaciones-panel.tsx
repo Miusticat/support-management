@@ -629,6 +629,7 @@ export function PostulacionesPanel() {
             const isVoting = votingRowIndex === row.rowIndex;
             const submittedAt = row.submittedAt || "-";
             const displayName = row.displayName;
+            const panelId = `postulacion-panel-${row.rowIndex}`;
 
             const projectedScores = row.evaluations.map((evaluation) => evaluation.score);
             if (isVoting && votingScore > 0) {
@@ -655,41 +656,31 @@ export function PostulacionesPanel() {
                   isExpanded ? "border-[#34d399]/50" : "hover:border-white/20"
                 }`}
               >
-                <button
-                  type="button"
-                  onClick={() => handleToggleExpand(row.rowIndex, isExpanded)}
-                  onKeyDown={(event) => {
-                    if (event.key === " ") {
-                      event.preventDefault();
-                    }
-                  }}
-                  aria-expanded={isExpanded}
-                  className="w-full text-left"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-md bg-white/6 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-(--color-neutral-grey)">
-                          #{Number(row.rowIndex) + 1}
-                        </span>
-                        {isExpanded ? (
-                          <ArrowDownAZ className="h-3.5 w-3.5 text-(--color-neutral-grey)/70" />
-                        ) : (
-                          <ArrowRight className="h-3.5 w-3.5 text-(--color-neutral-grey)/70" />
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm font-medium text-(--color-neutral-white) line-clamp-2">
-                        {displayName}
-                      </p>
-                      <p className="mt-1 text-xs text-(--color-neutral-grey)">
-                        {formatDateTime(submittedAt)}
-                      </p>
-                      <p className="mt-1 text-xs text-(--color-neutral-grey)">
-                        {row.evaluations.length} evaluaci{row.evaluations.length !== 1 ? "ones" : "on"}
-                        {expectedEvaluators.length > 0 ? ` · ${pendingVotes} pendientes` : ""}
-                      </p>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-md bg-white/6 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-(--color-neutral-grey)">
+                        #{Number(row.rowIndex) + 1}
+                      </span>
+                      {isExpanded ? (
+                        <ArrowDownAZ className="h-3.5 w-3.5 text-(--color-neutral-grey)/70" />
+                      ) : (
+                        <ArrowRight className="h-3.5 w-3.5 text-(--color-neutral-grey)/70" />
+                      )}
                     </div>
+                    <p className="mt-1 text-sm font-medium text-(--color-neutral-white) line-clamp-2">
+                      {displayName}
+                    </p>
+                    <p className="mt-1 text-xs text-(--color-neutral-grey)">
+                      {formatDateTime(submittedAt)}
+                    </p>
+                    <p className="mt-1 text-xs text-(--color-neutral-grey)">
+                      {row.evaluations.length} evaluaci{row.evaluations.length !== 1 ? "ones" : "on"}
+                      {expectedEvaluators.length > 0 ? ` · ${pendingVotes} pendientes` : ""}
+                    </p>
+                  </div>
 
+                  <div className="flex shrink-0 items-center gap-3">
                     {liveAverage !== null && (
                       <div className="flex items-center gap-2">
                         <div className="text-right">
@@ -710,11 +701,26 @@ export function PostulacionesPanel() {
                         </div>
                       </div>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleToggleExpand(row.rowIndex, isExpanded)}
+                      onKeyDown={(event) => {
+                        if (event.key === " " || event.key === "Spacebar") {
+                          event.preventDefault();
+                        }
+                      }}
+                      aria-expanded={isExpanded}
+                      aria-controls={panelId}
+                      className="rounded-lg border border-white/10 bg-white/3 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-(--color-neutral-grey) transition-colors hover:bg-white/8"
+                    >
+                      {isExpanded ? "Cerrar detalle" : "Ver detalle"}
+                    </button>
                   </div>
-                </button>
+                </div>
 
                 {isExpanded && (
-                  <div className="mt-4 border-t border-white/8 pt-4 space-y-4">
+                  <div id={panelId} className="mt-4 border-t border-white/8 pt-4 space-y-4">
                     {votingClosed && !resultsReady && (
                       <div className="rounded-lg border border-[#facc15]/35 bg-[#facc15]/12 px-3 py-2 text-xs text-[#ffe7a3]">
                         Cerrando votacion y consolidando resultados...
