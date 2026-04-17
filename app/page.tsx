@@ -5,6 +5,7 @@ import { PageShell } from "@/app/components/page-shell";
 import { prisma } from "@/lib/prisma";
 import { StatCard } from "@/app/components/stat-card";
 import { TeamSupportPanel } from "@/app/components/team-support-panel";
+import { TeamShowcaseCarousel } from "@/app/components/team-showcase-carousel";
 
 export const dynamic = "force-dynamic";
 
@@ -36,17 +37,15 @@ type DiscordGuildMember = {
   user?: {
     id?: string;
     username?: string;
-    global_name?: string | null;
     avatar?: string | null;
-    discriminator?: string;
   };
 };
 
-type SupportShowcaseItem = {
+type TeamMember = {
   id: string;
   name: string;
-  roleLabel: string;
   avatarUrl: string;
+  role: "Support Lead" | "Support Trainer";
 };
 
 function normalizeRoleId(value: string | undefined, fallback: string) {
@@ -66,41 +65,12 @@ const ROLE_SUPPORT_ID = normalizeRoleId(
   "1486041737964290211"
 );
 
-function toDisplayName(member: DiscordGuildMember) {
-  const id = member.user?.id?.trim();
-  const fallback = id ? `Support ${id.slice(-4)}` : "Support";
-  return member.user?.global_name?.trim() || member.user?.username?.trim() || fallback;
-}
-
-function toAvatarUrl(member: DiscordGuildMember) {
-  const userId = member.user?.id?.trim();
-  if (!userId) {
-    return "https://cdn.discordapp.com/embed/avatars/0.png";
-  }
-
-  const avatarHash = member.user?.avatar?.trim();
-  if (avatarHash) {
-    const extension = avatarHash.startsWith("a_") ? "gif" : "png";
-    return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${extension}?size=256`;
-  }
-
-  const discriminator = member.user?.discriminator?.trim();
-  const fallbackIndex = discriminator && discriminator !== "0"
-    ? Number.parseInt(discriminator, 10) % 5
-    : Number(BigInt(userId) % 6n);
-
-  return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
-}
-
-async function fetchGuildSupportSnapshot() {
+async function fetchGuildSupportIds() {
   const guildId = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
 
   if (!guildId || !botToken) {
-    return {
-      supportIds: new Set<string>(),
-      showcase: [] as SupportShowcaseItem[],
-    };
+    return new Set<string>();
   }
 
   const collected: DiscordGuildMember[] = [];
@@ -119,10 +89,7 @@ async function fetchGuildSupportSnapshot() {
     );
 
     if (!response.ok) {
-      return {
-        supportIds: new Set<string>(),
-        showcase: [] as SupportShowcaseItem[],
-      };
+      return new Set<string>();
     }
 
     const pageMembers = (await response.json()) as DiscordGuildMember[];
@@ -142,7 +109,7 @@ async function fetchGuildSupportSnapshot() {
     }
   }
 
-  const supportIds = new Set(
+  return new Set(
     collected
       .filter((member) => {
         const roles = Array.isArray(member.roles) ? member.roles : [];
@@ -155,35 +122,100 @@ async function fetchGuildSupportSnapshot() {
       .map((member) => member.user?.id?.trim() ?? "")
       .filter((id) => id.length > 0)
   );
+}
 
-  const showcase = collected
+async function fetchTeamMembers(): Promise<TeamMember[]> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+
+  if (!guildId || !botToken) {
+    return [];
+  }
+
+  const collected: DiscordGuildMember[] = [];
+  let after = "0";
+
+  for (let page = 0; page < 5; page += 1) {
+    const response = await fetch(
+      `https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bot ${botToken}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const pageMembers = (await response.json()) as DiscordGuildMember[];
+    if (!Array.isArray(pageMembers) || pageMembers.length === 0) {
+      break;
+    }
+
+    collected.push(...pageMembers);
+    const lastMemberId = pageMembers[pageMembers.length - 1]?.user?.id;
+    if (!lastMemberId) {
+      break;
+    }
+
+    after = lastMemberId;
+    if (pageMembers.length < 1000) {
+      break;
+    }
+  }
+
+  const leads = collected
     .filter((member) => {
       const roles = Array.isArray(member.roles) ? member.roles : [];
-      return roles.includes(ROLE_SUPPORT_LEAD_ID) || roles.includes(ROLE_SUPPORT_TRAINER_ID);
+      return roles.includes(ROLE_SUPPORT_LEAD_ID);
     })
     .map((member) => {
-      const roles = Array.isArray(member.roles) ? member.roles : [];
-      const memberId = member.user?.id?.trim() || `unknown-${toDisplayName(member)}`;
+      const userId = member.user?.id?.trim() ?? "";
+      const username = member.user?.username?.trim() ?? `User ${userId}`;
+      const avatar = member.user?.avatar;
+      const avatarUrl = avatar
+        ? `https://cdn.discordapp.com/avatars/${userId}/${avatar}.webp`
+        : `https://cdn.discordapp.com/embed/avatars/${parseInt(userId) % 6}.png`;
+
       return {
-        id: memberId,
-        name: toDisplayName(member),
-        roleLabel: roles.includes(ROLE_SUPPORT_LEAD_ID) ? "Support Lead" : "Support Trainer",
-        avatarUrl: toAvatarUrl(member),
+        id: userId,
+        name: username,
+        avatarUrl,
+        role: "Support Lead" as const,
       };
-    })
-    .sort((a, b) => {
-      if (a.roleLabel !== b.roleLabel) {
-        return a.roleLabel === "Support Lead" ? -1 : 1;
-      }
+    });
 
-      return a.name.localeCompare(b.name, "es");
+  const trainers = collected
+    .filter((member) => {
+      const roles = Array.isArray(member.roles) ? member.roles : [];
+      return roles.includes(ROLE_SUPPORT_TRAINER_ID);
     })
-    .slice(0, 14);
+    .map((member) => {
+      const userId = member.user?.id?.trim() ?? "";
+      const username = member.user?.username?.trim() ?? `User ${userId}`;
+      const avatar = member.user?.avatar;
+      const avatarUrl = avatar
+        ? `https://cdn.discordapp.com/avatars/${userId}/${avatar}.webp`
+        : `https://cdn.discordapp.com/embed/avatars/${parseInt(userId) % 6}.png`;
 
-  return { supportIds, showcase };
+      return {
+        id: userId,
+        name: username,
+        avatarUrl,
+        role: "Support Trainer" as const,
+      };
+    });
+
+  return [...leads, ...trainers];
 }
 
 async function loadDashboardData() {
+  const teamMembers = await fetchTeamMembers();
+
   const sanctionRows = await prisma.$queryRaw<SanctionRow[]>`
     SELECT "supportDiscordId", "appliedSanction", "createdAt"
     FROM "StaffSanction"
@@ -236,14 +268,22 @@ async function loadDashboardData() {
     lifecycleRows = [];
   }
 
-  const { supportIds: currentSupportIds, showcase: supportShowcase } =
-    await fetchGuildSupportSnapshot();
+  const currentSupportIds = await fetchGuildSupportIds();
   let gravesCount = 0;
+  const breakdownMap = new Map<string, number>([
+    ["Advertencia", 0],
+    ["Warn Intermedio", 0],
+    ["Warn Grave", 0],
+    ["Suspension", 0],
+    ["Remocion", 0],
+  ]);
 
   for (const row of sanctionRows) {
     if (["Warn Grave", "Suspension", "Remocion"].includes(row.appliedSanction)) {
       gravesCount += 1;
     }
+
+    breakdownMap.set(row.appliedSanction, (breakdownMap.get(row.appliedSanction) ?? 0) + 1);
   }
 
   const totalPositivePointsGiven = Number(positivePointsTotals.totalPoints ?? 0);
@@ -271,6 +311,7 @@ async function loadDashboardData() {
   const rankingBadge = rankingRowsCount > 0 ? `Top ${rankingRowsCount}` : "Sin datos";
 
   return {
+    teamMembers,
     stats: [
       {
         title: "Total de Supports",
@@ -305,13 +346,15 @@ async function loadDashboardData() {
       month: row.supportName,
       value: Number(row.totalPoints),
     })),
-    supportShowcase,
+    breakdownData: Array.from(breakdownMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .filter((item) => item.value > 0),
     rankingBadge,
   };
 }
 
 export default async function Home() {
-  const { stats, activityData, supportShowcase, rankingBadge } = await loadDashboardData();
+  const { stats, activityData, breakdownData, rankingBadge, teamMembers } = await loadDashboardData();
 
   return (
     <PageShell>
@@ -327,16 +370,18 @@ export default async function Home() {
         ))}
       </section>
 
-      <section className="mt-8">
-        <ChartsPanelShell
-          activityData={activityData}
-          activityTitle="Ranking de Supports Destacados"
-          activitySubtitle="Ordenados por puntos positivos acumulados"
-          activityBadge={rankingBadge}
-          showcaseTitle="Staff de Referencia"
-          showcaseSubtitle="Presentacion dinamica de Support Lead y Support Trainer"
-          supportShowcase={supportShowcase}
-        />
+      <section className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <ChartsPanelShell
+            activityData={activityData}
+            activityTitle="Ranking de Supports Destacados"
+            activitySubtitle="Ordenados por puntos positivos acumulados"
+            activityBadge={rankingBadge}
+          />
+        </div>
+        <div>
+          <TeamShowcaseCarousel members={teamMembers} />
+        </div>
       </section>
 
       <section className="mt-8">

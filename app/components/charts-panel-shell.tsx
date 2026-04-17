@@ -7,21 +7,11 @@ type ActivityPoint = {
   value: number;
 };
 
-type SupportShowcasePoint = {
-  id: string;
-  name: string;
-  roleLabel: string;
-  avatarUrl: string;
-};
-
 type ChartsPanelShellProps = {
   activityData: ActivityPoint[];
   activityTitle: string;
   activitySubtitle: string;
   activityBadge?: string;
-  showcaseTitle: string;
-  showcaseSubtitle: string;
-  supportShowcase: SupportShowcasePoint[];
 };
 
 const ChartsPanel = dynamic(
