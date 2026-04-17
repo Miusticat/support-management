@@ -5,6 +5,7 @@ import { PageShell } from "@/app/components/page-shell";
 import { prisma } from "@/lib/prisma";
 import { StatCard } from "@/app/components/stat-card";
 import { TeamSupportPanel } from "@/app/components/team-support-panel";
+import { TesterManagerStatsPanel } from "@/app/components/tester-manager-stats-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -266,6 +267,10 @@ export default async function Home() {
         {stats.map((stat) => (
           <StatCard key={stat.title} {...stat} />
         ))}
+      </section>
+
+      <section className="mt-8">
+        <TesterManagerStatsPanel />
       </section>
 
       <section className="mt-8">
