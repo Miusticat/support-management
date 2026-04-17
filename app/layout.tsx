@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   title: "Support Management",
   description: "Support team operations and analytics dashboard",
   icons: {
-    icon: "/img/logo.png",
-    shortcut: "/img/logo.png",
-    apple: "/img/logo.png",
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
 };
 
