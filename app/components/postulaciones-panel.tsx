@@ -631,22 +631,22 @@ export function PostulacionesPanel() {
             const displayName = row.displayName;
             const panelId = `postulacion-panel-${row.rowIndex}`;
 
-            const projectedScores = row.evaluations.map((evaluation) => evaluation.score);
+            const baseTotalScore = row.evaluations.reduce((acc, evaluation) => acc + evaluation.score, 0);
+            const baseVotesCount = row.evaluations.length;
+
+            let liveAverage = computeAverage(row.evaluations.map((evaluation) => evaluation.score));
+
             if (isVoting && votingScore > 0) {
-              const currentVoteScore = row.currentUserVote?.score ?? null;
-              if (currentVoteScore !== null) {
-                const replaceIndex = projectedScores.findIndex((score) => score === currentVoteScore);
-                if (replaceIndex >= 0) {
-                  projectedScores[replaceIndex] = votingScore;
-                } else {
-                  projectedScores.push(votingScore);
-                }
+              if (row.currentUserVote) {
+                const projectedTotal = baseTotalScore - row.currentUserVote.score + votingScore;
+                liveAverage = baseVotesCount > 0 ? Number((projectedTotal / baseVotesCount).toFixed(2)) : null;
               } else {
-                projectedScores.push(votingScore);
+                const projectedTotal = baseTotalScore + votingScore;
+                const projectedCount = baseVotesCount + 1;
+                liveAverage = Number((projectedTotal / projectedCount).toFixed(2));
               }
             }
 
-            const liveAverage = computeAverage(projectedScores);
             const pendingVotes = Math.max(expectedEvaluators.length - row.evaluations.length, 0);
 
             return (
