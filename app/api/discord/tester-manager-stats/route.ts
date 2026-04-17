@@ -105,8 +105,65 @@ function parseMetrics(html: string): ParsedMetric[] {
   }));
 }
 
+type CookieDiagnostics = {
+  configured: boolean;
+  length: number;
+  hasCfClearance: boolean;
+  hasGtaworldSession: boolean;
+  hasXsrfToken: boolean;
+};
+
+function buildCookieFromEnv() {
+  const fullCookie = process.env.PCU_TESTER_MANAGER_COOKIE?.trim();
+  if (fullCookie) {
+    return fullCookie;
+  }
+
+  const pairs: string[] = [];
+  const cfClearance = process.env.PCU_TESTER_MANAGER_CF_CLEARANCE?.trim();
+  const gtaworldSession = process.env.PCU_TESTER_MANAGER_GTAWORLD_SESSION?.trim();
+  const xsrfToken = process.env.PCU_TESTER_MANAGER_XSRF_TOKEN?.trim();
+  const rememberWeb = process.env.PCU_TESTER_MANAGER_REMEMBER_WEB?.trim();
+  const ectrixNetW8 = process.env.PCU_TESTER_MANAGER_ECTRIXNET_W8?.trim();
+
+  if (cfClearance) {
+    pairs.push(`cf_clearance=${cfClearance}`);
+  }
+  if (gtaworldSession) {
+    pairs.push(`gtaworld_session=${gtaworldSession}`);
+  }
+  if (xsrfToken) {
+    pairs.push(`XSRF-TOKEN=${xsrfToken}`);
+  }
+  if (rememberWeb) {
+    pairs.push(`remember_web_59ba36addc2b2f9401580f014c7f58ea4e30989d=${rememberWeb}`);
+  }
+  if (ectrixNetW8) {
+    pairs.push(`ectrixNet-w8=${ectrixNetW8}`);
+  }
+
+  if (pairs.length === 0) {
+    return undefined;
+  }
+
+  return pairs.join("; ");
+}
+
+function getCookieDiagnostics(cookieHeader: string | undefined): CookieDiagnostics {
+  const lowered = (cookieHeader || "").toLowerCase();
+
+  return {
+    configured: Boolean(cookieHeader),
+    length: cookieHeader?.length || 0,
+    hasCfClearance: lowered.includes("cf_clearance="),
+    hasGtaworldSession: lowered.includes("gtaworld_session="),
+    hasXsrfToken: lowered.includes("xsrf-token="),
+  };
+}
+
 export async function GET() {
-  const cookieFromEnv = process.env.PCU_TESTER_MANAGER_COOKIE?.trim();
+  const cookieFromEnv = buildCookieFromEnv();
+  const cookieDiagnostics = getCookieDiagnostics(cookieFromEnv);
   const userAgent =
     process.env.PCU_TESTER_MANAGER_USER_AGENT?.trim() ||
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -146,15 +203,28 @@ export async function GET() {
           fetchedAt: new Date().toISOString(),
           metrics: [] as ParsedMetric[],
           note: `Fuente no disponible (HTTP ${response.status}).`,
+          diagnostics: cookieDiagnostics,
         },
         { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } }
       );
     }
 
     if (detectAntiBot(html)) {
-      const note = cookieFromEnv
-        ? "La fuente sigue bloqueando la sesion. La cookie puede estar expirada o invalidada para el entorno actual."
-        : "La fuente requiere JavaScript/sesion para entregar datos. Configura PCU_TESTER_MANAGER_COOKIE para habilitar lectura automatica.";
+      let note =
+        "La fuente requiere JavaScript/sesion para entregar datos. Configura PCU_TESTER_MANAGER_COOKIE para habilitar lectura automatica.";
+
+      if (cookieDiagnostics.configured) {
+        if (!cookieDiagnostics.hasCfClearance || !cookieDiagnostics.hasGtaworldSession) {
+          note =
+            "Cookie incompleta en entorno. Debe incluir al menos cf_clearance y gtaworld_session.";
+        } else if (cookieDiagnostics.length > 3800) {
+          note =
+            "Cookie demasiado larga para un valor estable en entorno. Usa variables separadas (PCU_TESTER_MANAGER_CF_CLEARANCE y PCU_TESTER_MANAGER_GTAWORLD_SESSION).";
+        } else {
+          note =
+            "La fuente sigue bloqueando la sesion. La cookie puede estar expirada o invalidada para el entorno actual.";
+        }
+      }
 
       return NextResponse.json(
         {
@@ -163,6 +233,7 @@ export async function GET() {
           fetchedAt: new Date().toISOString(),
           metrics: [] as ParsedMetric[],
           note,
+          diagnostics: cookieDiagnostics,
         },
         { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } }
       );
@@ -180,6 +251,7 @@ export async function GET() {
         note: hasAnyValue
           ? null
           : "No se pudieron reconocer metricas en el HTML recibido.",
+        diagnostics: cookieDiagnostics,
       },
       { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } }
     );
@@ -193,6 +265,7 @@ export async function GET() {
         fetchedAt: new Date().toISOString(),
         metrics: [] as ParsedMetric[],
         note: `Error al consultar fuente externa: ${details}`,
+        diagnostics: cookieDiagnostics,
       },
       { status: 200, headers: { "Cache-Control": "no-store, max-age=0" } }
     );
