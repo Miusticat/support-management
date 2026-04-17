@@ -35,7 +35,18 @@ type DiscordGuildMember = {
   roles?: string[];
   user?: {
     id?: string;
+    username?: string;
+    global_name?: string | null;
+    avatar?: string | null;
+    discriminator?: string;
   };
+};
+
+type SupportShowcaseItem = {
+  id: string;
+  name: string;
+  roleLabel: string;
+  avatarUrl: string;
 };
 
 function normalizeRoleId(value: string | undefined, fallback: string) {
@@ -55,12 +66,41 @@ const ROLE_SUPPORT_ID = normalizeRoleId(
   "1486041737964290211"
 );
 
-async function fetchGuildSupportIds() {
+function toDisplayName(member: DiscordGuildMember) {
+  const id = member.user?.id?.trim();
+  const fallback = id ? `Support ${id.slice(-4)}` : "Support";
+  return member.user?.global_name?.trim() || member.user?.username?.trim() || fallback;
+}
+
+function toAvatarUrl(member: DiscordGuildMember) {
+  const userId = member.user?.id?.trim();
+  if (!userId) {
+    return "https://cdn.discordapp.com/embed/avatars/0.png";
+  }
+
+  const avatarHash = member.user?.avatar?.trim();
+  if (avatarHash) {
+    const extension = avatarHash.startsWith("a_") ? "gif" : "png";
+    return `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.${extension}?size=256`;
+  }
+
+  const discriminator = member.user?.discriminator?.trim();
+  const fallbackIndex = discriminator && discriminator !== "0"
+    ? Number.parseInt(discriminator, 10) % 5
+    : Number(BigInt(userId) % 6n);
+
+  return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
+}
+
+async function fetchGuildSupportSnapshot() {
   const guildId = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
 
   if (!guildId || !botToken) {
-    return new Set<string>();
+    return {
+      supportIds: new Set<string>(),
+      showcase: [] as SupportShowcaseItem[],
+    };
   }
 
   const collected: DiscordGuildMember[] = [];
@@ -79,7 +119,10 @@ async function fetchGuildSupportIds() {
     );
 
     if (!response.ok) {
-      return new Set<string>();
+      return {
+        supportIds: new Set<string>(),
+        showcase: [] as SupportShowcaseItem[],
+      };
     }
 
     const pageMembers = (await response.json()) as DiscordGuildMember[];
@@ -99,7 +142,7 @@ async function fetchGuildSupportIds() {
     }
   }
 
-  return new Set(
+  const supportIds = new Set(
     collected
       .filter((member) => {
         const roles = Array.isArray(member.roles) ? member.roles : [];
@@ -112,6 +155,32 @@ async function fetchGuildSupportIds() {
       .map((member) => member.user?.id?.trim() ?? "")
       .filter((id) => id.length > 0)
   );
+
+  const showcase = collected
+    .filter((member) => {
+      const roles = Array.isArray(member.roles) ? member.roles : [];
+      return roles.includes(ROLE_SUPPORT_LEAD_ID) || roles.includes(ROLE_SUPPORT_TRAINER_ID);
+    })
+    .map((member) => {
+      const roles = Array.isArray(member.roles) ? member.roles : [];
+      const memberId = member.user?.id?.trim() || `unknown-${toDisplayName(member)}`;
+      return {
+        id: memberId,
+        name: toDisplayName(member),
+        roleLabel: roles.includes(ROLE_SUPPORT_LEAD_ID) ? "Support Lead" : "Support Trainer",
+        avatarUrl: toAvatarUrl(member),
+      };
+    })
+    .sort((a, b) => {
+      if (a.roleLabel !== b.roleLabel) {
+        return a.roleLabel === "Support Lead" ? -1 : 1;
+      }
+
+      return a.name.localeCompare(b.name, "es");
+    })
+    .slice(0, 14);
+
+  return { supportIds, showcase };
 }
 
 async function loadDashboardData() {
@@ -167,22 +236,14 @@ async function loadDashboardData() {
     lifecycleRows = [];
   }
 
-  const currentSupportIds = await fetchGuildSupportIds();
+  const { supportIds: currentSupportIds, showcase: supportShowcase } =
+    await fetchGuildSupportSnapshot();
   let gravesCount = 0;
-  const breakdownMap = new Map<string, number>([
-    ["Advertencia", 0],
-    ["Warn Intermedio", 0],
-    ["Warn Grave", 0],
-    ["Suspension", 0],
-    ["Remocion", 0],
-  ]);
 
   for (const row of sanctionRows) {
     if (["Warn Grave", "Suspension", "Remocion"].includes(row.appliedSanction)) {
       gravesCount += 1;
     }
-
-    breakdownMap.set(row.appliedSanction, (breakdownMap.get(row.appliedSanction) ?? 0) + 1);
   }
 
   const totalPositivePointsGiven = Number(positivePointsTotals.totalPoints ?? 0);
@@ -244,15 +305,13 @@ async function loadDashboardData() {
       month: row.supportName,
       value: Number(row.totalPoints),
     })),
-    breakdownData: Array.from(breakdownMap.entries())
-      .map(([name, value]) => ({ name, value }))
-      .filter((item) => item.value > 0),
+    supportShowcase,
     rankingBadge,
   };
 }
 
 export default async function Home() {
-  const { stats, activityData, breakdownData, rankingBadge } = await loadDashboardData();
+  const { stats, activityData, supportShowcase, rankingBadge } = await loadDashboardData();
 
   return (
     <PageShell>
@@ -271,12 +330,12 @@ export default async function Home() {
       <section className="mt-8">
         <ChartsPanelShell
           activityData={activityData}
-          breakdownData={breakdownData}
           activityTitle="Ranking de Supports Destacados"
           activitySubtitle="Ordenados por puntos positivos acumulados"
           activityBadge={rankingBadge}
-          breakdownTitle="Distribucion por tipo"
-          breakdownSubtitle="Total de sanciones por categoria aplicada"
+          showcaseTitle="Staff de Referencia"
+          showcaseSubtitle="Presentacion dinamica de Support Lead y Support Trainer"
+          supportShowcase={supportShowcase}
         />
       </section>
 
