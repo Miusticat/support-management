@@ -108,9 +108,9 @@ export function ChartsPanel({
         title={showcaseTitle}
         subtitle={showcaseSubtitle}
       >
-        <div className="relative h-70 overflow-hidden rounded-2xl border border-white/10 bg-(--surface-2)">
+        <div className="relative h-70 overflow-hidden rounded-2xl border border-white/10 bg-white/3">
           {supportShowcase.length === 0 ? (
-            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-(--muted)">
+            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-gray-400">
               No hay Support Lead/Trainer disponibles para mostrar en este momento.
             </div>
           ) : (
@@ -135,7 +135,7 @@ export function ChartsPanel({
                   </div>
 
                   <div className="text-center">
-                    <p className="text-lg font-semibold text-foreground">{support.name}</p>
+                    <p className="text-lg font-semibold text-(--color-neutral-white)">{support.name}</p>
                     <p className="text-sm uppercase tracking-[0.18em] text-[#ffac00]">
                       {support.roleLabel}
                     </p>
