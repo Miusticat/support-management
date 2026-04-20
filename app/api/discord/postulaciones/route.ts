@@ -51,6 +51,10 @@ function normalizeDiscordId(value: string | null | undefined) {
   return normalized.length > 0 ? normalized : null;
 }
 
+function normalizeName(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? null;
+}
+
 function escapeSqlLiteral(value: string) {
   return value.replace(/'/g, "''");
 }
@@ -458,6 +462,7 @@ export async function GET() {
 
     const finalizedResults = votingClosed ? await loadStoredResults() : [];
     const currentUserDiscordId = normalizeDiscordId(session.user.discordUserId ?? null);
+    const currentUserName = normalizeName(session.user.name ?? null);
     const evaluators = await fetchEvaluatorsFromDiscord();
 
     const rowsWithEvaluations = await Promise.all(
@@ -465,11 +470,15 @@ export async function GET() {
         const evaluations = await loadEvaluations(String(index));
         const scores = evaluations.map((e) => e.score);
         const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
-        const currentUserVote = currentUserDiscordId
-          ? evaluations.find(
-              (e) => normalizeDiscordId(e.evaluatorDiscordId) === currentUserDiscordId
-            )
-          : null;
+        const currentUserVote = evaluations.find((e) => {
+          const evaluationDiscordId = normalizeDiscordId(e.evaluatorDiscordId);
+          const evaluationName = normalizeName(e.evaluatorName);
+
+          return (
+            (currentUserDiscordId !== null && evaluationDiscordId === currentUserDiscordId) ||
+            (currentUserName !== null && evaluationName === currentUserName)
+          );
+        });
 
         return {
           rowData: row,
