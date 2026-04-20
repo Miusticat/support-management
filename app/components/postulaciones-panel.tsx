@@ -37,6 +37,7 @@ type PostulacionesResponse = {
   votingClosed?: boolean;
   resultsReady?: boolean;
   expectedEvaluators?: Array<{ discordId: string; name: string; roles: string[] }>;
+  myProgress?: { voted: number; pending: number; total: number };
   fetchedAt?: string;
   error?: string;
 };
@@ -183,6 +184,7 @@ export function PostulacionesPanel() {
   const [votingClosed, setVotingClosed] = useState(false);
   const [resultsReady, setResultsReady] = useState(false);
   const [expectedEvaluators, setExpectedEvaluators] = useState<Array<{ discordId: string; name: string; roles: string[] }>>([]);
+  const [myProgress, setMyProgress] = useState<{ voted: number; pending: number; total: number } | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<string | null>(null);
   const [votingRowIndex, setVotingRowIndex] = useState<string | null>(null);
   const [votingScore, setVotingScore] = useState<number>(0);
@@ -219,6 +221,15 @@ export function PostulacionesPanel() {
       setVotingClosed(Boolean(data.votingClosed));
       setResultsReady(Boolean(data.resultsReady));
       setExpectedEvaluators(Array.isArray(data.expectedEvaluators) ? data.expectedEvaluators : []);
+      setMyProgress(
+        data.myProgress
+          ? {
+              voted: Number(data.myProgress.voted ?? 0),
+              pending: Number(data.myProgress.pending ?? 0),
+              total: Number(data.myProgress.total ?? 0),
+            }
+          : null
+      );
       setLastSyncAt(data.fetchedAt ?? new Date().toISOString());
       setError(null);
     } catch (err) {
@@ -416,6 +427,9 @@ export function PostulacionesPanel() {
 
   const visibleIndexes = useMemo(() => filteredRows.map((row) => row.rowIndex), [filteredRows]);
   const expandedVisiblePosition = expandedIndex ? visibleIndexes.indexOf(expandedIndex) : -1;
+  const progressVoted = myProgress?.voted ?? globalStats.votedByMe;
+  const progressPending = myProgress?.pending ?? globalStats.pendingByMe;
+  const progressTotal = myProgress?.total ?? globalStats.total;
 
   const handleToggleExpand = useCallback((rowIndex: string, isExpanded: boolean) => {
     setExpandedIndex(isExpanded ? null : rowIndex);
@@ -574,10 +588,10 @@ export function PostulacionesPanel() {
           <div className="rounded-lg border border-white/10 bg-white/2 p-3">
             <p className="text-[10px] uppercase tracking-[0.16em] text-(--color-neutral-grey)/70">Mi progreso</p>
             <p className="mt-1 text-xl font-semibold text-[#34d399]">
-              {globalStats.votedByMe} de {globalStats.total}
+              {progressVoted} de {progressTotal}
             </p>
             <p className="mt-1 text-[11px] text-(--color-neutral-grey)">
-              {globalStats.pendingByMe} pendientes por votar
+              {progressPending} pendientes por votar
             </p>
           </div>
           <div className="rounded-lg border border-white/10 bg-white/2 p-3">
