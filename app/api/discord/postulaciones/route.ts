@@ -55,6 +55,35 @@ function normalizeName(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? null;
 }
 
+async function loadMyProgressCount(currentUserDiscordId: string | null, currentUserName: string | null) {
+  try {
+    if (currentUserDiscordId) {
+      const result = await prisma.$queryRaw<Array<{ totalVotes: bigint }>>`
+        SELECT COUNT(DISTINCT "postulacionIndex")::bigint AS "totalVotes"
+        FROM "PostulacionesEvaluation"
+        WHERE "evaluatorDiscordId" = ${currentUserDiscordId}
+           OR LOWER("evaluatorName") = ${currentUserName ?? ""}
+      `;
+
+      return Number(result[0]?.totalVotes ?? 0);
+    }
+
+    if (currentUserName) {
+      const result = await prisma.$queryRaw<Array<{ totalVotes: bigint }>>`
+        SELECT COUNT(DISTINCT "postulacionIndex")::bigint AS "totalVotes"
+        FROM "PostulacionesEvaluation"
+        WHERE LOWER("evaluatorName") = ${currentUserName}
+      `;
+
+      return Number(result[0]?.totalVotes ?? 0);
+    }
+
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 function escapeSqlLiteral(value: string) {
   return value.replace(/'/g, "''");
 }
@@ -492,7 +521,7 @@ export async function GET() {
       })
     );
 
-    const myVotesCount = rowsWithEvaluations.filter((row) => Boolean(row.currentUserVote)).length;
+    const myVotesCount = await loadMyProgressCount(currentUserDiscordId, currentUserName);
     const myPendingCount = Math.max(rowsWithEvaluations.length - myVotesCount, 0);
 
     return NextResponse.json(
