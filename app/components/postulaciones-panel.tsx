@@ -42,8 +42,15 @@ type PostulacionesResponse = {
 };
 
 const REFRESH_INTERVAL_MS = 30_000;
+const PASSING_SCORE = 3;
 
-type FilterMode = "all" | "pending-mine" | "voted-mine" | "without-votes";
+type FilterMode =
+  | "all"
+  | "approved"
+  | "not-approved"
+  | "pending-mine"
+  | "voted-mine"
+  | "without-votes";
 type SortMode = "recent" | "average-desc" | "average-asc" | "name-asc";
 
 function formatDateTime(value: string | null) {
@@ -328,6 +335,14 @@ export function PostulacionesPanel() {
         return Boolean(row.currentUserVote);
       }
 
+      if (filterMode === "approved") {
+        return row.liveAverage !== null && row.liveAverage >= PASSING_SCORE;
+      }
+
+      if (filterMode === "not-approved") {
+        return row.liveAverage === null || row.liveAverage < PASSING_SCORE;
+      }
+
       if (filterMode === "without-votes") {
         return row.evaluations.length === 0;
       }
@@ -365,7 +380,11 @@ export function PostulacionesPanel() {
   const globalStats = useMemo(() => {
     const total = rowsWithComputed.length;
     const votedByMe = rowsWithComputed.filter((row) => Boolean(row.currentUserVote)).length;
+    const pendingByMe = Math.max(total - votedByMe, 0);
     const withoutVotes = rowsWithComputed.filter((row) => row.evaluations.length === 0).length;
+    const approved = rowsWithComputed.filter(
+      (row) => row.liveAverage !== null && row.liveAverage >= PASSING_SCORE
+    ).length;
 
     const scoreAccumulator = rowsWithComputed.reduce(
       (acc, row) => {
@@ -386,7 +405,10 @@ export function PostulacionesPanel() {
     return {
       total,
       votedByMe,
+      pendingByMe,
       withoutVotes,
+      approved,
+      notApproved: total - approved,
       totalVotes: scoreAccumulator.totalVotes,
       overallAverage,
     };
@@ -551,15 +573,22 @@ export function PostulacionesPanel() {
           </div>
           <div className="rounded-lg border border-white/10 bg-white/2 p-3">
             <p className="text-[10px] uppercase tracking-[0.16em] text-(--color-neutral-grey)/70">Mi progreso</p>
-            <p className="mt-1 text-xl font-semibold text-[#34d399]">{globalStats.votedByMe}/{globalStats.total}</p>
+            <p className="mt-1 text-xl font-semibold text-[#34d399]">
+              {globalStats.votedByMe} de {globalStats.total}
+            </p>
+            <p className="mt-1 text-[11px] text-(--color-neutral-grey)">
+              {globalStats.pendingByMe} pendientes por votar
+            </p>
           </div>
           <div className="rounded-lg border border-white/10 bg-white/2 p-3">
             <p className="text-[10px] uppercase tracking-[0.16em] text-(--color-neutral-grey)/70">Promedio global</p>
             <p className="mt-1 text-xl font-semibold text-[#ffac00]">{globalStats.overallAverage !== null ? globalStats.overallAverage.toFixed(2) : "-"}</p>
           </div>
           <div className="rounded-lg border border-white/10 bg-white/2 p-3">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-(--color-neutral-grey)/70">Sin votos</p>
-            <p className="mt-1 text-xl font-semibold text-[#facc15]">{globalStats.withoutVotes}</p>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-(--color-neutral-grey)/70">Aprobados / No aprobados</p>
+            <p className="mt-1 text-xl font-semibold text-[#facc15]">
+              {globalStats.approved} / {globalStats.notApproved}
+            </p>
           </div>
         </div>
 
@@ -578,6 +607,8 @@ export function PostulacionesPanel() {
           <div className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/3 p-1">
             {[
               { value: "all", label: "Todas" },
+              { value: "approved", label: "Aprobados" },
+              { value: "not-approved", label: "No Aprobados" },
               { value: "pending-mine", label: "Pendientes" },
               { value: "voted-mine", label: "Votadas" },
               { value: "without-votes", label: "Sin votos" },
