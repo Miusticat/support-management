@@ -137,6 +137,44 @@ function isRowMeaningful(row: string[]) {
   return row.some((value) => value.trim().length > 0);
 }
 
+function normalizeHeaderLabel(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function resolveCandidateNameColumnIndex(headers: string[]) {
+  const normalizedHeaders = headers.map((header) => normalizeHeaderLabel(header));
+
+  const preferredIndex = normalizedHeaders.findIndex(
+    (header) =>
+      header.includes("cual es tu nombre en el pcu") ||
+      header.includes("nombre en el pcu")
+  );
+
+  if (preferredIndex >= 0) {
+    return preferredIndex;
+  }
+
+  // Fallback for older sheets where name was expected in the second column.
+  return headers.length > 1 ? 1 : 0;
+}
+
+function resolveCandidateName(rowData: string[], rowIndex: number, candidateNameColumnIndex: number) {
+  const nameFromConfiguredColumn = rowData[candidateNameColumnIndex]?.trim() ?? "";
+
+  if (nameFromConfiguredColumn.length > 0) {
+    return nameFromConfiguredColumn;
+  }
+
+  const fallbackName = rowData[1]?.trim() || rowData[0]?.trim();
+  return fallbackName && fallbackName.length > 0 ? fallbackName : `Postulación ${rowIndex + 1}`;
+}
+
 function extractSheetSourceFromUrl(value: string) {
   const input = value.trim();
   if (!input) return null;
@@ -301,6 +339,7 @@ async function loadStoredResults() {
 async function finalizeResultsIfNeeded(headers: string[], normalizedRows: string[][]) {
   const storedCount = await countStoredResults();
   const expectedCount = normalizedRows.length;
+  const candidateNameColumnIndex = resolveCandidateNameColumnIndex(headers);
 
   if (storedCount === expectedCount && expectedCount > 0) {
     return;
@@ -315,7 +354,7 @@ async function finalizeResultsIfNeeded(headers: string[], normalizedRows: string
     const votesCount = scores.length;
     const averageScore = votesCount > 0 ? Number((scores.reduce((a, b) => a + b, 0) / votesCount).toFixed(2)) : null;
     const decision = decideResult(averageScore, votesCount);
-    const candidateName = rowData[1]?.trim() || rowData[0] || `Postulación ${index + 1}`;
+    const candidateName = resolveCandidateName(rowData, index, candidateNameColumnIndex);
     const submittedAt = rowData[0] ?? "";
     const resultId = `${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`;
 

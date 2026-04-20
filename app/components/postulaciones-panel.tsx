@@ -138,6 +138,33 @@ function computeAverage(scores: number[]) {
   return Number((total / scores.length).toFixed(2));
 }
 
+function normalizeHeaderLabel(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function resolveCandidateNameColumnIndex(headers: string[], fallbackColumnCount: number) {
+  const normalizedHeaders = headers.map((header) => normalizeHeaderLabel(header));
+
+  const preferredIndex = normalizedHeaders.findIndex(
+    (header) =>
+      header.includes("cual es tu nombre en el pcu") ||
+      header.includes("nombre en el pcu")
+  );
+
+  if (preferredIndex >= 0) {
+    return preferredIndex;
+  }
+
+  const fallbackHasSecondColumn = Math.max(headers.length, fallbackColumnCount) > 1;
+  return fallbackHasSecondColumn ? 1 : 0;
+}
+
 export function PostulacionesPanel() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<PostulacionRow[]>([]);
@@ -256,6 +283,11 @@ export function PostulacionesPanel() {
     return [];
   }, [headers, rows]);
 
+  const candidateNameColumnIndex = useMemo(() => {
+    const fallbackColumnCount = rows[0]?.rowData.length ?? 0;
+    return resolveCandidateNameColumnIndex(tableHeaders, fallbackColumnCount);
+  }, [rows, tableHeaders]);
+
   const votingActive = Boolean(!votingClosed && !countdown?.isExpired && votingDeadline);
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -263,7 +295,8 @@ export function PostulacionesPanel() {
   const rowsWithComputed = useMemo(() => {
     return rows.map((row, index) => {
       const submittedAt = row.rowData[0] ?? "";
-      const displayName = row.rowData[1]?.trim() || row.rowData[0] || `Postulacion ${index + 1}`;
+      const configuredName = row.rowData[candidateNameColumnIndex]?.trim() ?? "";
+      const displayName = configuredName || row.rowData[1]?.trim() || row.rowData[0] || `Postulacion ${index + 1}`;
       const liveAverage = computeAverage(row.evaluations.map((evaluation) => evaluation.score));
 
       return {
@@ -274,7 +307,7 @@ export function PostulacionesPanel() {
         liveAverage,
       };
     });
-  }, [rows]);
+  }, [candidateNameColumnIndex, rows]);
 
   const filteredRows = useMemo(() => {
     const withFilters = rowsWithComputed.filter((row) => {
