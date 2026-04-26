@@ -1,5 +1,6 @@
 // Ticket-scoped audit log (separate from the sanctions audit).
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 export type AuditAction =
   | "import_data"
@@ -36,7 +37,9 @@ export async function logAudit(entry: {
       userId: entry.user_id != null ? String(entry.user_id) : null,
       username: entry.username,
       action: entry.action,
-      details: entry.details ? (entry.details as object) : undefined,
+      details: entry.details
+        ? (entry.details as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
       ipAddress: entry.ip_address ?? null,
     },
   });
@@ -72,7 +75,15 @@ export async function getAuditLog(opts: {
     prisma.ticketAuditLog.count({ where }),
   ]);
 
-  const entries: AuditEntry[] = rows.map((r) => ({
+  const entries: AuditEntry[] = rows.map((r: {
+    id: number;
+    userId: string | null;
+    username: string;
+    action: string;
+    details: Prisma.JsonValue | null;
+    ipAddress: string | null;
+    createdAt: Date;
+  }) => ({
     id: r.id,
     user_id: r.userId,
     username: r.username,

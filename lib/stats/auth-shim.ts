@@ -9,11 +9,14 @@ export async function getSession(): Promise<StatsSessionUser | null> {
   return derivePermissionsFromSession(session);
 }
 
-export async function getSessionFromRequest(): Promise<StatsSessionUser | null> {
+export async function getSessionFromRequest(
+  _req?: Request | { headers: Headers } | unknown
+): Promise<StatsSessionUser | null> {
   return getSession();
 }
 
-export function getIpFromRequest(req: Request): string {
-  const xff = req.headers.get("x-forwarded-for");
-  return xff?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+export function getIpFromRequest(req: Request | { headers: Headers }): string {
+  const headers = (req as { headers: Headers }).headers;
+  const xff = headers.get("x-forwarded-for");
+  return xff?.split(",")[0]?.trim() || headers.get("x-real-ip") || "unknown";
 }
