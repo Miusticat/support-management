@@ -45,6 +45,45 @@ type FinalResultRow = {
   finalizedAt: Date;
 };
 
+function normalizeDiscordId(value: string | null | undefined) {
+  if (!value) return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeName(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? null;
+}
+
+async function loadMyProgressCount(currentUserDiscordId: string | null, currentUserName: string | null) {
+  try {
+    if (currentUserDiscordId) {
+      const result = await prisma.$queryRaw<Array<{ totalVotes: bigint }>>`
+        SELECT COUNT(DISTINCT "postulacionIndex")::bigint AS "totalVotes"
+        FROM "PostulacionesEvaluation"
+        WHERE "evaluatorDiscordId" = ${currentUserDiscordId}
+           OR LOWER("evaluatorName") = ${currentUserName ?? ""}
+      `;
+
+      return Number(result[0]?.totalVotes ?? 0);
+    }
+
+    if (currentUserName) {
+      const result = await prisma.$queryRaw<Array<{ totalVotes: bigint }>>`
+        SELECT COUNT(DISTINCT "postulacionIndex")::bigint AS "totalVotes"
+        FROM "PostulacionesEvaluation"
+        WHERE LOWER("evaluatorName") = ${currentUserName}
+      `;
+
+      return Number(result[0]?.totalVotes ?? 0);
+    }
+
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 function escapeSqlLiteral(value: string) {
   return value.replace(/'/g, "''");
 }
@@ -451,7 +490,8 @@ export async function GET() {
     }
 
     const finalizedResults = votingClosed ? await loadStoredResults() : [];
-    const currentUserDiscordId = session.user.discordUserId ?? null;
+    const currentUserDiscordId = normalizeDiscordId(session.user.discordUserId ?? null);
+    const currentUserName = normalizeName(session.user.name ?? null);
     const evaluators = await fetchEvaluatorsFromDiscord();
 
     const rowsWithEvaluations = await Promise.all(
@@ -459,9 +499,15 @@ export async function GET() {
         const evaluations = await loadEvaluations(String(index));
         const scores = evaluations.map((e) => e.score);
         const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
-        const currentUserVote = currentUserDiscordId
-          ? evaluations.find((e) => e.evaluatorDiscordId === currentUserDiscordId)
-          : null;
+        const currentUserVote = evaluations.find((e) => {
+          const evaluationDiscordId = normalizeDiscordId(e.evaluatorDiscordId);
+          const evaluationName = normalizeName(e.evaluatorName);
+
+          return (
+            (currentUserDiscordId !== null && evaluationDiscordId === currentUserDiscordId) ||
+            (currentUserName !== null && evaluationName === currentUserName)
+          );
+        });
 
         return {
           rowData: row,
@@ -475,6 +521,9 @@ export async function GET() {
       })
     );
 
+    const myVotesCount = await loadMyProgressCount(currentUserDiscordId, currentUserName);
+    const myPendingCount = Math.max(rowsWithEvaluations.length - myVotesCount, 0);
+
     return NextResponse.json(
       {
         headers,
@@ -484,6 +533,11 @@ export async function GET() {
         resultsReady: finalizedResults.length > 0,
         finalizedResults,
         expectedEvaluators: evaluators,
+        myProgress: {
+          voted: myVotesCount,
+          pending: myPendingCount,
+          total: rowsWithEvaluations.length,
+        },
         source: { sheetId, gid: sheetGid },
         fetchedAt: new Date().toISOString(),
       },
@@ -534,7 +588,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const evaluatorDiscordId = session.user.discordUserId ?? "";
+    const evaluatorDiscordId = normalizeDiscordId(session.user.discordUserId ?? "") ?? "";
     const evaluatorName = session.user.name ?? "Anónimo";
 
     if (!evaluatorDiscordId) {
