@@ -125,6 +125,67 @@ model SanctionPolicyCategory {
   @@index([sortOrder])
 }
 
+// ─── Stats: ported from support-tracker ──────────────────────
+
+model Ticket {
+  id          Int       @id
+  username    String
+  character   String
+  request     String
+  submittedAt DateTime  @map("submitted_at") @db.Timestamptz(6)
+  handler     String?
+  importedBy  Int?      @map("imported_by")
+  importedAt  DateTime  @default(now()) @map("imported_at") @db.Timestamptz(6)
+  categoryId  Int?      @map("category_id")
+  category    TicketCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([submittedAt])
+  @@index([handler])
+  @@index([categoryId])
+  @@map("tickets")
+}
+
+model TicketCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  color       String
+  icon        String
+  description String?
+  keywords    String   @default("")
+  weight      Int      @default(1)
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tickets     Ticket[]
+
+  @@map("ticket_categories")
+}
+
+model SupportMember {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("support_members")
+}
+
+model TicketAuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    String?  @map("user_id")
+  username  String
+  action    String
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([username])
+  @@map("ticket_audit_log")
+}
+
 model SanctionPolicyInfraction {
   id          String                @id @default(cuid())
   categoryId  String

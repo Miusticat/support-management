@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LayoutDashboard, Megaphone, ClipboardCheck, AlertTriangle, ScrollText, UsersRound, LogOut, Shield, UserCircle2, Award, Settings2, History, FileText } from "lucide-react";
+import { LayoutDashboard, Megaphone, ClipboardCheck, AlertTriangle, ScrollText, UsersRound, LogOut, Shield, UserCircle2, Award, Settings2, History, FileText, BarChart3, Upload, Database, Tags } from "lucide-react";
 
 type NavItem = {
   label: string;
@@ -33,6 +33,17 @@ const navGroups: NavGroup[] = [
       { label: "Registrar sanciones", icon: AlertTriangle, href: "/discord/registrar-sancion" },
       { label: "Puntos positivos", icon: Award, href: "/discord/puntos-positivos" },
       { label: "Historial de sanciones", icon: ScrollText, href: "/discord/historial-sanciones" },
+    ],
+  },
+  {
+    heading: "Estadísticas",
+    items: [
+      { label: "Dashboard", icon: BarChart3, href: "/estadisticas" },
+      { label: "Importar datos", icon: Upload, href: "/estadisticas/import" },
+      { label: "Categorías", icon: Tags, href: "/estadisticas/categories/stats" },
+      { label: "Gestión de datos", icon: Database, href: "/estadisticas/manage" },
+      { label: "Miembros de soporte", icon: UsersRound, href: "/estadisticas/manage/support-members" },
+      { label: "Auditoría de tickets", icon: ScrollText, href: "/estadisticas/admin/audit" },
     ],
   },
   {
@@ -85,7 +96,7 @@ function Item({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-function canSeeItem(item: NavItem, canAccessSupports: boolean, canAccessSanctions: boolean, canAccessAdmin: boolean) {
+function canSeeItem(item: NavItem, canAccessSupports: boolean, canAccessSanctions: boolean, canAccessAdmin: boolean, canAccessStats: boolean, canManageStats: boolean, canViewAudit: boolean) {
   if (item.href === "/supports") {
     return canAccessSupports;
   }
@@ -98,6 +109,15 @@ function canSeeItem(item: NavItem, canAccessSupports: boolean, canAccessSanction
   if (item.href === "/discord/admin") {
     return canAccessAdmin;
   }
+  if (item.href === "/estadisticas" || item.href === "/estadisticas/categories/stats") {
+    return canAccessStats;
+  }
+  if (item.href === "/estadisticas/import" || item.href === "/estadisticas/manage" || item.href === "/estadisticas/manage/support-members") {
+    return canManageStats;
+  }
+  if (item.href === "/estadisticas/admin/audit") {
+    return canViewAudit;
+  }
   return true;
 }
 
@@ -109,7 +129,10 @@ export function Sidebar() {
   const canAccessSupports = (session?.user?.staffLevel ?? 0) >= 1;
   const canAccessSanctions =
     currentRole === "Support Lead" || currentRole === "Support Trainer";
-  const canAccessAdmin = currentRole === "Support Lead";
+  const canAccessAdmin = currentRole === "Support Lead" || currentRole === "Head of Team";
+  const canAccessStats = (session?.user?.staffLevel ?? 0) >= 1;
+  const canManageStats = canAccessSanctions || canAccessAdmin;
+  const canViewAudit = canAccessAdmin;
 
   const userName = session?.user?.name ?? null;
   const userImage = session?.user?.image ?? null;
@@ -133,7 +156,7 @@ export function Sidebar() {
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           {navGroups.map((group) => {
             const visibleItems = group.items.filter((item) =>
-              canSeeItem(item, canAccessSupports, canAccessSanctions, canAccessAdmin)
+              canSeeItem(item, canAccessSupports, canAccessSanctions, canAccessAdmin, canAccessStats, canManageStats, canViewAudit)
             );
             if (visibleItems.length === 0) return null;
 
@@ -186,7 +209,7 @@ export function Sidebar() {
       <nav className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-1.5rem)] -translate-x-1/2 items-center justify-around gap-1 rounded-2xl border border-white/[0.1] bg-[#141414]/90 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl lg:hidden">
         {navGroups
           .flatMap((g) => g.items)
-          .filter((item) => canSeeItem(item, canAccessSupports, canAccessSanctions, canAccessAdmin))
+          .filter((item) => canSeeItem(item, canAccessSupports, canAccessSanctions, canAccessAdmin, canAccessStats, canManageStats, canViewAudit))
           .map((item) => {
             const Icon = item.icon;
             const active = isItemActive(pathname, item.href);
