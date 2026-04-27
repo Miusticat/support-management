@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSql } from "@/lib/db";
-import { ensureDbInitialized } from "@/lib/db/schema";
-import { requireAuth, isAuthError } from "@/lib/api-auth";
-import { hasPermission } from "@/lib/permissions";
-import { getUserById } from "@/lib/db/users";
+import { getSql } from "@/lib/stats/db/index";
+import { ensureDbInitialized } from "@/lib/stats/db/schema";
+import { requireAuth, isAuthError } from "@/lib/stats/api-auth";
+import { hasPermission } from "@/lib/stats/permissions";
+import { getUserById } from "@/lib/stats/db/users";
 
 export async function PUT(req: NextRequest) {
   const auth = await requireAuth(req);
