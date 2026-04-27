@@ -1,11 +1,31 @@
 "use client";
 
-import { ComponentType } from "react";
+import { ComponentType, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LayoutDashboard, Megaphone, ClipboardCheck, AlertTriangle, ScrollText, UsersRound, LogOut, Shield, UserCircle2, Award, Settings2, History, FileText, BarChart3, Upload, Database, Tags } from "lucide-react";
+import {
+  LayoutDashboard,
+  Megaphone,
+  ClipboardCheck,
+  AlertTriangle,
+  ScrollText,
+  UsersRound,
+  LogOut,
+  Shield,
+  UserCircle2,
+  Award,
+  Settings2,
+  History,
+  FileText,
+  BarChart3,
+  Upload,
+  Database,
+  Tags,
+  X,
+} from "lucide-react";
+import { useSidebar } from "@/app/components/sidebar-context";
 
 type NavItem = {
   label: string;
@@ -59,76 +79,76 @@ const navGroups: NavGroup[] = [
 ];
 
 function isItemActive(pathname: string, href: string) {
-  if (href === "#") {
-    return false;
-  }
-
-  if (href === "/") {
-    return pathname === "/";
-  }
-
-  // Keep Discord main page active only on exact match.
-  if (href === "/discord") {
-    return pathname === "/discord";
-  }
-
+  if (href === "#") return false;
+  if (href === "/") return pathname === "/";
+  if (href === "/discord") return pathname === "/discord";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function Item({ item, active }: { item: NavItem; active: boolean }) {
+function Item({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate?: () => void }) {
   const Icon = item.icon;
-
   return (
     <Link
       href={item.href}
-      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200 ${
+      onClick={onNavigate}
+      className={`relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
         active
-          ? "bg-[#ffac00]/12 text-[#ffac00] shadow-[inset_0_0_20px_rgba(255,172,0,0.06)]"
-          : "text-[var(--color-neutral-grey)] hover:bg-white/[0.04] hover:text-[var(--color-neutral-white)]"
+          ? "bg-white/[0.04] text-[#ffac00]"
+          : "text-[var(--color-neutral-grey)] hover:bg-white/[0.03] hover:text-[var(--color-neutral-white)]"
       }`}
     >
       {active && (
-        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#ffac00] shadow-[0_0_8px_rgba(255,172,0,0.5)]" />
+        <span className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r bg-[#ffac00]" />
       )}
-      <Icon className={`h-4 w-4 shrink-0 ${active ? "drop-shadow-[0_0_6px_rgba(255,172,0,0.4)]" : ""}`} />
+      <Icon className="h-4 w-4 shrink-0" />
       <span className="truncate">{item.label}</span>
     </Link>
   );
 }
 
-function canSeeItem(item: NavItem, canAccessSupports: boolean, canAccessSanctions: boolean, canAccessAdmin: boolean, canAccessStats: boolean, canManageStats: boolean, canViewAudit: boolean) {
-  if (item.href === "/supports") {
-    return canAccessSupports;
-  }
-  if (["/discord/evaluacion-ascenso", "/discord/postulaciones", "/discord/historial-camadas", "/discord/registrar-sancion", "/discord/puntos-positivos", "/discord/historial-sanciones"].includes(item.href)) {
+function canSeeItem(
+  item: NavItem,
+  canAccessSupports: boolean,
+  canAccessSanctions: boolean,
+  canAccessAdmin: boolean,
+  canAccessStats: boolean,
+  canManageStats: boolean,
+  canViewAudit: boolean
+) {
+  if (item.href === "/supports") return canAccessSupports;
+  if (
+    [
+      "/discord/evaluacion-ascenso",
+      "/discord/postulaciones",
+      "/discord/historial-camadas",
+      "/discord/registrar-sancion",
+      "/discord/puntos-positivos",
+      "/discord/historial-sanciones",
+    ].includes(item.href)
+  ) {
     return canAccessSanctions;
   }
-  if (item.href === "/discord/gestion-sanciones") {
-    return canAccessAdmin;
-  }
-  if (item.href === "/discord/admin") {
-    return canAccessAdmin;
-  }
-  if (item.href === "/estadisticas" || item.href === "/estadisticas/categories/stats") {
-    return canAccessStats;
-  }
-  if (item.href === "/estadisticas/import" || item.href === "/estadisticas/manage" || item.href === "/estadisticas/manage/support-members") {
+  if (item.href === "/discord/gestion-sanciones") return canAccessAdmin;
+  if (item.href === "/discord/admin") return canAccessAdmin;
+  if (item.href === "/estadisticas" || item.href === "/estadisticas/categories/stats") return canAccessStats;
+  if (
+    item.href === "/estadisticas/import" ||
+    item.href === "/estadisticas/manage" ||
+    item.href === "/estadisticas/manage/support-members"
+  ) {
     return canManageStats;
   }
-  if (item.href === "/estadisticas/admin/audit") {
-    return canViewAudit;
-  }
+  if (item.href === "/estadisticas/admin/audit") return canViewAudit;
   return true;
 }
 
-export function Sidebar() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
   const currentRole = session?.user?.staffRole ?? null;
   const canAccessSupports = (session?.user?.staffLevel ?? 0) >= 1;
-  const canAccessSanctions =
-    currentRole === "Support Lead" || currentRole === "Support Trainer";
+  const canAccessSanctions = currentRole === "Support Lead" || currentRole === "Support Trainer";
   const canAccessAdmin = currentRole === "Support Lead" || currentRole === "Head of Team";
   const canAccessStats = (session?.user?.staffLevel ?? 0) >= 1;
   const canManageStats = canAccessSanctions || canAccessAdmin;
@@ -139,97 +159,120 @@ export function Sidebar() {
 
   return (
     <>
-      {/* ── Desktop Sidebar ──────────────────────────────────── */}
-      <aside className="animate-slide-in-left fixed left-5 top-5 z-40 hidden h-[calc(100vh-2.5rem)] w-64 flex-col rounded-2xl border border-white/[0.08] bg-[#141414]/90 shadow-[0_25px_60px_rgba(0,0,0,0.65)] backdrop-blur-xl lg:flex">
-        {/* Logo */}
-        <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-5">
-          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]">
-            <Image src="/img/logo.png" alt="Support Management" width={28} height={28} className="h-7 w-7 object-contain" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-[var(--color-neutral-white)]">Support Management</p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-neutral-grey)]">GTA World</p>
-          </div>
+      {/* Logo */}
+      <div className="flex items-center gap-3 border-b border-white/[0.05] px-5 py-4">
+        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md border border-white/[0.08] bg-[#1a1a1a]">
+          <Image src="/img/logo.png" alt="Support Management" width={28} height={28} className="h-7 w-7 object-contain" />
         </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-[var(--color-neutral-white)]">Support Management</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-neutral-grey)]">GTA World</p>
+        </div>
+      </div>
 
-        {/* Navigation groups */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          {navGroups.map((group) => {
-            const visibleItems = group.items.filter((item) =>
-              canSeeItem(item, canAccessSupports, canAccessSanctions, canAccessAdmin, canAccessStats, canManageStats, canViewAudit)
-            );
-            if (visibleItems.length === 0) return null;
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter((item) =>
+            canSeeItem(item, canAccessSupports, canAccessSanctions, canAccessAdmin, canAccessStats, canManageStats, canViewAudit)
+          );
+          if (visibleItems.length === 0) return null;
 
-            return (
-              <div key={group.heading} className="mb-4">
-                <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--color-neutral-grey)]/60">
-                  {group.heading}
-                </p>
-                <div className="space-y-0.5">
-                  {visibleItems.map((item) => (
-                    <Item key={item.label} item={item} active={isItemActive(pathname, item.href)} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </nav>
-
-        {/* User footer */}
-        <div className="border-t border-white/[0.06] px-4 py-4">
-          {userName ? (
-            <div className="mb-3 flex items-center gap-3">
-              <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-lg border border-white/10 bg-[#1a1a1a]">
-                {userImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={userImage} alt={userName} className="h-full w-full object-cover" />
-                ) : (
-                  <UserCircle2 className="h-4 w-4 text-[var(--color-neutral-grey)]" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-[var(--color-neutral-white)]">{userName}</p>
-                {currentRole && (
-                  <p className="truncate text-[10px] text-[var(--color-neutral-grey)]">{currentRole}</p>
-                )}
+          return (
+            <div key={group.heading} className="mb-4">
+              <p className="mb-1.5 px-3 text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--color-neutral-grey)]/60">
+                {group.heading}
+              </p>
+              <div className="space-y-0.5">
+                {visibleItems.map((item) => (
+                  <Item
+                    key={item.label}
+                    item={item}
+                    active={isItemActive(pathname, item.href)}
+                    onNavigate={onNavigate}
+                  />
+                ))}
               </div>
             </div>
-          ) : null}
-          <button
-            onClick={() => signOut()}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[var(--color-neutral-grey)] transition-all duration-200 hover:bg-white/[0.04] hover:text-[var(--color-neutral-white)]"
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            <span>Cerrar sesión</span>
-          </button>
-        </div>
+          );
+        })}
+      </nav>
+
+      {/* User footer */}
+      <div className="border-t border-white/[0.05] px-4 py-3">
+        {userName ? (
+          <div className="mb-2 flex items-center gap-3">
+            <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-white/[0.08] bg-[#1a1a1a]">
+              {userImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={userImage} alt={userName} className="h-full w-full object-cover" />
+              ) : (
+                <UserCircle2 className="h-4 w-4 text-[var(--color-neutral-grey)]" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-[var(--color-neutral-white)]">{userName}</p>
+              {currentRole && (
+                <p className="truncate text-[10px] text-[var(--color-neutral-grey)]">{currentRole}</p>
+              )}
+            </div>
+          </div>
+        ) : null}
+        <button
+          onClick={() => signOut()}
+          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[var(--color-neutral-grey)] transition-colors hover:bg-white/[0.03] hover:text-[var(--color-neutral-white)]"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </>
+  );
+}
+
+export function Sidebar() {
+  const { open, setOpen } = useSidebar();
+
+  // Close drawer on Esc
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, setOpen]);
+
+  return (
+    <>
+      {/* Desktop: flush column */}
+      <aside className="sticky top-0 hidden h-screen w-[260px] flex-col border-r border-white/[0.06] bg-[#111] lg:flex">
+        <SidebarContent />
       </aside>
 
-      {/* ── Mobile Bottom Nav ────────────────────────────────── */}
-      <nav className="fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-1.5rem)] -translate-x-1/2 items-center justify-around gap-1 rounded-2xl border border-white/[0.1] bg-[#141414]/90 p-2 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl lg:hidden">
-        {navGroups
-          .flatMap((g) => g.items)
-          .filter((item) => canSeeItem(item, canAccessSupports, canAccessSanctions, canAccessAdmin, canAccessStats, canManageStats, canViewAudit))
-          .map((item) => {
-            const Icon = item.icon;
-            const active = isItemActive(pathname, item.href);
-
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={`flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] transition-all ${
-                  active
-                    ? "bg-[#ffac00]/12 text-[#ffac00]"
-                    : "text-[var(--color-neutral-grey)] hover:bg-white/[0.04]"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="max-w-[4rem] truncate">{item.label}</span>
-              </Link>
-            );
-          })}
-      </nav>
+      {/* Mobile: backdrop + drawer */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/60 transition-opacity lg:hidden ${
+          open ? "opacity-100" : "pointer-events-none opacity-0"
+        }`}
+        onClick={() => setOpen(false)}
+        aria-hidden={!open}
+      />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-white/[0.06] bg-[#111] transition-transform duration-200 lg:hidden ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-md text-[var(--color-neutral-grey)] hover:bg-white/[0.04] hover:text-[var(--color-neutral-white)]"
+          aria-label="Cerrar menú"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <SidebarContent onNavigate={() => setOpen(false)} />
+      </aside>
     </>
   );
 }
