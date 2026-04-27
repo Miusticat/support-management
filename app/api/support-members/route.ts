@@ -9,13 +9,6 @@ export async function GET(req: NextRequest) {
   const auth = await requireAuth(req);
   if (isAuthError(auth)) return auth;
 
-  const user = await getUserById(auth.id);
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  if (!hasPermission(user, "can_manage_support")) {
-    return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
-  }
-
   await ensureDbInitialized();
   const sql = getSql();
 

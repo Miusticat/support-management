@@ -163,7 +163,7 @@ export default function CategoriesStatsPage() {
       if (filters.categoryIds.length > 0) {
         params.append("categories", filters.categoryIds.join(","));
       }
-      const res = await fetch(`/api/categories/stats?${params}`);
+      const res = await fetch(`/api/ticket-categories/stats?${params}`);
       if (res.ok) {
         const data = await res.json();
         // API now returns { categories, uncategorizedCount }
